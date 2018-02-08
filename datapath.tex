@@ -1,0 +1,125 @@
+\section{Datapath Responsibilities}
+\label{s:datapath}
+
+%\subsection{Communication}
+%\label{s:datapath:ipc}
+
+A CCP-compatible datapath must accurately enforce the congestion control algorithm specified by the user-space CCP module. While algorithms themselves are free from considering datapath-specific concerns, from the datapath's perspective it is almost as if the developer were writing their algorithm directly into the datapath.
+Furthermore, once a datapath implements support for CCP, it automatically enables all CCP algorithms.
+
+\medskip
+A CCP datapath has three responsibilities:
+\begin{enumerate}
+  \item It should communicate with the CCP agent (running on the same host) using an inter-process communication (IPC) mechanism. CCP expects datapaths to multiplex messages for different flows onto a single persistent IPC connection. Datapaths should assign flow IDs for CCP to demultiplex information.
+  \item To accurately execute the algorithm, datapaths should enforce the congestion windows and pacing rates specified by the control pattern.
+  \item Datapaths should update fold function calculations soon after new information arrives (\ie upon every ACK) and report these summaries to CCP as specified by the control pattern.
+\end{enumerate}
+
+\subsection{Control Patterns}
+\label{s:datapath:windows}
+The datapath must observe any congestion windows and pacing rates CCP algorithms specify. 
+%While datapaths ideally provide support for both windows and rates separately, at the minimum, a datapath should provide support for one. 
+The datapath should independently enforce the congestion window and pacing rate unless a CCP algorithm’s directives indicate otherwise. 
+Independent enforcement can allow algorithms to specify, for example, a congestion window with a rate cap to prevent bursty transmission. We excerpt the CCP Copa implementation (\S\ref{s:ccp:new-algorithms}) to demonstrate this:
+
+\begin{minted}{rust}
+SetRateAbs(...) => SetCwndAbs(...) => 
+    WaitRtts(0.25) => Report()
+\end{minted}
+
+\subsection{Fold Function Support}
+\label{s:datapath:fold}
+Fold functions are loop-free collections of arithmetic operations over congestion signals specified by the CCP.
+While the CCP will compile fold functions into a datapath-compatible format and check for common errors (\eg use of undefined variables) before installing them in the datapath, it is the datapath's responsibility to ensure safe interpretation of fold functions; for example, datapaths should prevent divide by zero errors when calculating congestion signals and guarantee that fold functions cannot overwrite the congestion primitives.
+
+Table~\ref{tab:datapath:signals} specifies the signals our
+datapaths currently implement. The more signals a datapath can measure, the more algorithms that datapath can support. For example, CCP can only support DCTCP~\cite{dctcp} or ABC~\cite{abc} on datapaths that provide ECN support; CCP will not run algorithms on datapaths lacking support for that algorithm's requisite primitives.
+In the future, we imagine the list of primitives could extend beyond TCP to algorithms such as XCP \cite{xcp}.
+
+%\noindent
+%Datapaths should be able to perform the operations in Table~\ref{tab:datapath:signals}.
+%
+%This set of operators is constrained enough that they can be calculated efficiently by datapaths, and yet provide enough flexibility to allow developers to express complex fold functions.
+
+After every ACK, the datapath must update the signal values, run the fold function, and send summary results to CCP as specified by the control patterns. Fold functions can also specify certain urgent conditions upon which the datapath should bypass the reporting interval specified in the control pattern and immediately send a summary to CCP. For example, a loss-based controller can react promptly to a packet loss with this mechanism:
+%This allows an implementation of \eg a loss-based algorithm to immediately learn about a packet drop and reduce its window with %minimal delay:
+\begin{minted}{lisp}
+  (def (Summary.loss 0))
+    (:= Summary.loss 
+      (+ Summary.loss A.lost_pkts_sample))
+  (:= isUrgent (> Summary.loss 0))
+\end{minted}
+
+Fold functions also allow per-ACK modification of the congestion window. We discuss this feature in \S\ref{s:ccp:semantics}. 
+%
+%\dr{I wanted to mention something here about **why** we chose these primitives exactly. That it's more general than the TCP specific notion of things. But I wasn't sure how to bring it up}
+%
+\subsection{Implementation}
+\label{s:datapath:libccp}
+
+We have implemented a library, \texttt{libccp}, which provides a reference implementation of CCP fold function computations and message serialization for software datapaths. 
+To use \texttt{libccp}, the datapath must provide callbacks to functions that: (1) set the window and rate, (2) provide a notion of time, and (3) send an IPC message to CCP. 
+Upon reading a message from CCP, the datapath calls \texttt{ccp\_recv\_msg()}, which automatically demultiplexes the message for the correct flow. It then runs the control pattern, which uses the datapath callbacks.
+After updating congestion signals, the datapath can call \texttt{ccp\_invoke()}, which automatically computes the fold functions and sends the summaries to CCP. 
+%\texttt{libccp} reduces the job of the datapath developer to two main issues: measuring and exposing the congestion signals, and setting congestion windows and rates.
+It is the responsibility of the datapath to ensure that it correctly computes and provides the congestion signals defined in Table~\ref{tab:datapath:signals}.
+
+We use \texttt{libccp} to implement CCP support for three datapaths: the Linux kernel, QUIC, and mTCP (a \userspace{} TCP stack on top of DPDK).
+
+% \paragrapha{Linux kernel}
+% \label{s:datapaths:kernel}
+% \paragrapha{QUIC}
+% \label{s:datapaths:quic}
+For the Linux kernel and QUIC datapaths, we implemented CCP support through their pluggable congestion control interfaces. Both the kernel and QUIC support setting congestion windows and pacing rates. Both datapaths already expose most of the congestion signals defined in Table~\ref{tab:datapath:signals}. 
+QUIC needs to maintain additional state per flow as well as communicate with the \userspace{} CCP module. We modified QUIC to set up a persistent Unix-domain socket on initialization for communication, and expose the function callbacks specified by the \texttt{libccp} API. We patched the Linux kernel to expose both transmission and delivery rates, and communicate with the \userspace through Netlink sockets~\cite{netlink}.
+
+% When QUIC receives a message from \userspace{}, it invokes \texttt{libccp} update the window or rate for the flow. Upon receiving an ACK, QUIC immediately calculates a vector of newly acked packets as well as newly lost packets. After updating these signals, the CCP flow triggers \texttt{libccp} to calculate the fold functions and send measurements if necessary. 
+
+% While it is often natural to translate internal datapath variables into values for CCP's signals, it is sometimes difficult to define this translation correctly. 
+% For example, we observed that assigning CCP's \texttt{lost\_pkts\_sample} primitive to the length of QUIC's internal vector of lost packets occasionally caused our NewReno implementation to make spurious window reductions during loss recovery.
+% By redefining QUIC's reporting of \texttt{lost\_pkts\_sample} to match CCP's semantics, we prevented spurious window reductions from occurring.
+
+% \paragrapha{mTCP/DPDK}
+% \label{s:datapaths:mtcp}
+Unlike QUIC and the Linux kernel, mTCP only implements Reno and does not explicitly expose a congestion control interface for new algorithms. Hence, we modified the mTCP transport code directly:
+we added pacing support, implemented SACK, and made sure it keeps the right number of packets in flight during loss recovery. 
+%
+mTCP does not implement SACK or packet pacing, and when it observes a loss (defined as a triple duplicate ACK), it retransmits all packets in sequence starting from the lost packet, even if only a single packet was lost. As a result, when initially testing our implementation of Cubic, each time the buffer was filled, CCP would cut the window, but when the cumulative ACK finally advanced, mTCP would immediately burst out a congestion window worth of packets (most of which had already been successfully received and SACKed), forcing another drop, and so on. Our changes enabled our mTCP datapath to expose a consistent behavior as the other datapaths. (\S\ref{fig:datapaths:wora}), 
+
+%For example, the Linux kernel is significantly more mature than both QUIC and mTCP
+%Implementing support for CCP in your datapath is not as simple as simply translating variables to ccp ones, also have to ensure that your datapath's behavior,
+%Simple translations of datapath to state to libccp signals may not result in high performance, due to datapath implementation details 
+
+
+
+
+
+% The datapath must communicate with CCP using some inter-process communication (IPC) mechanism when they both run on the same host. It should also maintain the congestion signals listed in Table~\ref{tab:datapath:signals}.
+
+% Datapaths should ideally support both congestion windows and pacing rates, but at a minimum must support at least one of these two settings. The datapath should independently enforce the congestion window and pacing rate, unless a CCP algorithm's directives indicate otherwise. Independent enforcement is useful to allow algorithms to specify a congestion window with a rate cap to prevent burst transmission.
+
+% \subsection{Fold functions}
+% \label{s:datapath:fold}
+
+% CCP algorithms specify fold functions in a high-level small Lisp-like language. CCP compiles this language into a series of instructions the datapath should execute. The language is intentionally simple and constrained so that it can run efficiently on a variety of datapaths; the most complex operations in the language are simple aggregate calculations that run on the fields of arriving ACKs.
+        
+% The fold instructions operate over a series of registers the datapath should maintain. The fold instructions are executed upon every ACK, after the measurements corresponding to that ACK are incorporated into the datapath's state. There are three types of registers:
+% \begin{itemize}
+%     \item Congestion signals, as specified in Table~\ref{tab:datapath:signals}. These signals are can only be read and not written by a fold function.
+%     \item Return values specified in the fold function. There are two special return registers, \texttt{isUrgent} and \texttt{Cwnd}, used to bypass the logic in the control pattern. Writing ``True'' to \texttt{isUrgent} indicates that the datapath should send the current measurement to CCP immediately. Writing a value to \texttt{Cwnd} indicates that the datapath should use that value for its congestion window. Note that it is unwise to use this register in conjunction with a control pattern because they might overwrite each other.
+%     \item Temporary registers for transient computation state.
+% \end{itemize}
+        
+% The datapath should support the following operations over these registers:
+% \begin{itemize}
+%     \item Arithmetic: integer addition, subtraction, multiplication, division, min, max, and EWMA
+%     \item Comparisons: Equality, greater than, less than
+%     \item Conditionals: For simplicity, our conditional operations do not branch: a value is stored in the output register if the conditional passes, otherwise nothing happens.
+% \end{itemize}
+        
+% It is the datapath's responsibility to perform these operations safely.
+
+% \subsection{\texttt{libccp}}
+% \label{s:datapath:libccp}
+
+% To ease the task of implementing CCP support for a datapath, we implemented \texttt{libccp}, a library providing reference implementations of control patterns and the fold instruction state machine. \texttt{libccp} asks the datapath to provide callbacks to set the congestion window and rate, send an IPC message to the CCP, and provide a notion of time. In return, \texttt{libccp} provides two functions: \texttt{ccp\_recv\_msg()} to handle incoming IPC messages, and \texttt{ccp\_invoke()}, which the datapath can call upon every received packet to calculate the new state of the control pattern and the fold state machines, and potentially send a signal summary to CCP. We used \texttt{libccp} to implement CCP support for the Linux kernel TCP, QUIC, and mTCP.

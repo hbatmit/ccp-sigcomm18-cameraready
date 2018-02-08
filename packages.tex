@@ -1,0 +1,83 @@
+\if 0
+\setlength\paperheight{11in}
+\setlength\paperwidth{8.5in}
+\setlength{\textwidth}{7in}
+\setlength{\textheight}{9.25in}
+\setlength{\oddsidemargin}{-.25in}
+\setlength{\evensidemargin}{-.25in}
+
+\fi
+
+%
+\usepackage{xspace}
+\usepackage{multirow}
+\usepackage{comment}
+\usepackage{fancybox, fancyvrb, calc}
+\usepackage{subcaption}
+\usepackage[inline]{enumitem}
+\usepackage{amsmath, amssymb}
+\usepackage{cite,url}
+\usepackage{pbox}
+\usepackage{balance}
+\usepackage{wrapfig}
+%
+%\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{mathptmx}
+\usepackage{enumitem}
+\setlist{nolistsep}
+\usepackage{hhline}
+%
+\captionsetup[table]{skip=-1pt,font={footnotesize}}
+\captionsetup[subfigure]{skip=-1pt,font={footnotesize}}
+\captionsetup[figure]{font={footnotesize}}
+\Urlmuskip=0mu plus 1mu
+\hypersetup{%
+  colorlinks=true,      % false: boxed links; true: colored links
+  linkcolor=blue,       % color of internal links
+  citecolor=magenta,    % color of links to bibliography
+  filecolor=cyan,       % color of file links
+  urlcolor=blue          % color of external links
+}
+%
+\usepackage{leading}
+\leading{12pt}
+%
+\usepackage{minted}
+%
+\usepackage[subtle]{savetrees}
+\usepackage[small,compact]{titlesec}
+\usepackage{outlines}
+%
+\newcommand{\cut}[1]{}
+%
+\newcommand{\paragraphnone}[1]{\vspace{0.075in}\noindent{\bf #1}}
+\newcommand{\paragrapha}[1]{\vspace{0.075in}\noindent{\bf #1.}}
+\newcommand{\paragraphq}[1]{\vspace{0.075in}\noindent{\bf #1}}
+%
+\newcommand{\eg}{e.g., }
+\newcommand{\etc}{{etc.}\xspace}
+\newcommand{\ie}{i.e., }
+\newcommand{\ccp}{CCP\xspace}
+%
+\newcommand{\an}[1]{{\color{green}\bf AN: {#1}}}
+\newcommand{\sn}[1]{{\color{purple}\bf NG: {#1}}}
+\newcommand{\hb}[1]{{\color{brown}\bf HB: {#1}}}
+\newcommand{\ma}[1]{{\color{red}\bf MA: {#1}}}
+\newcommand{\pg}[1]{{\color{blue}\bf PG: {#1}}}
+\newcommand{\fc}[1]{{\color{blue}\bf FC: {#1}}}
+\newcommand{\dr}[1]{{\color{magenta}\bf DR: {#1}}}
+\newcommand{\radhika}[1]{{\color{cyan}\bf RM: {#1}}}
+%
+\newcommand{\datapath}{datapath\xspace}
+\newcommand{\datapaths}{datapaths\xspace}
+\newcommand{\Datapaths}{Datapaths\xspace}
+\newcommand{\Datapath}{Datapath\xspace}
+%
+\frenchspacing
+%
+\newcommand{\handlers}{callbacks\xspace}
+\newcommand{\userspace}{user-space\xspace}
+\newcommand{\kernelspace}{kernel-space\xspace}
+%
+\newcommand{\controller}{agent\xspace}

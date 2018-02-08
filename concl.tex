@@ -1,0 +1,20 @@
+\section{Conclusion}
+\label{s:concl}
+
+We described the design, implementation, and evaluation of CCP, a system that restructures congestion control at the sender. CCP defines better abstractions for congestion control, specifying the responsibilities of the datapath and showing a way to use fold functions and control patterns to exercise control over datapath behavior. We showed how CCP (i) enables the same algorithm code to run on a variety of datapaths, (ii) increases the ``velocity'' of development and improves maintainability, and (iii) facilitates new capabilities such as the congestion manager-style aggregation and sophisticated signal processing algorithms. 
+
+Our implementation achieves high fidelity compared to native datapath implementations at low CPU overhead. The use of fold functions and summarization reduces overhead, but not at the expense of correctness or accuracy.
+
+\if 0
+Furthermore, we provide an implementation of a CCP, Portus, and show that it can match the behavior and performance of congestion control algorithms implemented natively in the datapath. We envision building on this platform in the following directions:
+
+\fi
+
+Future work includes: (i) CCP support for customizing congestion control for specific applications such as video streaming and videoconferencing, (ii) CCP on hardware datapaths (\eg SmartNICs), and (iii) CCP running on a different machine from the datapath to support cluster-based congestion management (\eg for a server farm communicating with distributed clients).
+
+\if 0
+
+\paragrapha{Application Integration} The CCP API is flexible enough to support a wide variety of congestion control algorithms, as well as make explicit the trade-off between complexity, reactivity, and performance in congestion control.
+As a result, we anticipate that CCP will allow for the customization of congestion control to specific applications, \eg video streaming; while the current CCP design does not communicate with applications directly, it is easy to imagine such an extension.
+
+\fi

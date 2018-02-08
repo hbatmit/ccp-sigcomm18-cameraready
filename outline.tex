@@ -1,0 +1,92 @@
+\section{Outline}
+
+\begin{outline}[enumerate]
+\1 Contribution
+    \2 the case for CCP
+        \3 first to move congestion control out of the datapath
+        \3 write-once run-everywhere
+    \2 the first programmable streaming API that can operate over native data structures
+    \2 study of slowness of congestion control reactions 
+    \2 first time certain algorithms have been implemented on some datapath
+\1 Motivation. Why is the existing API for congestion control insufficient? (1-2 pages)
+    \2 existing congestion control is tied to the ACK clock. this has two implications:
+    \2 congestion control computation is limited to the packet inter-arrival time
+    \2 congestion control must be implemented in the datapath
+        \3 write-one run-anywhere: different algorithms must be re-implemented for each datapath
+        \3 datapath programming environment: datapaths often have constrained programming environments for performance reasons
+\1 Design. What is our proposed design? (3-4 pages)
+    \2 CCP: a congestion control plane is a module in which the logic for congestion control in its various forms resides.
+    \2 A ``datapath'' is an entity which:
+        \3 transfers data from applications to the wire
+        \3 includes the transport layer and below.
+        \3 complies with the libccp interface, which is explained below.
+    \2 Where should CCP be: In-kernel or userspace?
+        \3 benefits of in-kernel
+            \4 usable across all applications
+            \4 ``safe''?
+            \4 high performance
+        \3 disadvantages of in-kernel
+            \4 usage with kernel-bypass datapaths is awkward
+            \4 programming is more difficult
+            \4 trusted computing base size is large
+        \3 we conclude CCP should be in userspace
+    \2 CCP Design
+        \3 Two components: algorithm API to implement congestion control schemes, and datapath API to support CCP
+        \3 algorithm API
+            \4 Event Handlers
+            \4 OnCreate: a new flow has begun
+            \4 OnMeasurement: a congestion event has occurred. The measurements returned and when this even is triggered is governed by the user-provided fold function and send pattern
+            \4 send patterns: user specifies a sequence of states the datapath should transition through, synced to the ACK clock.
+            \4 fold function: user specifies a program in a \emph{constrained, domain specific language with a lisp-like syntax} which is run upon every packet. Program decides what measurements to store, and whether to bypass the send pattern's default measurement period and notify CCP immediately. fold function can also optionally set the congestion window.
+            \4 discuss tradeoffs of setting cwnd in fold function vs in CCP (more vs less control, more vs less reactiveness)
+        \3 datapath API (libccp): datapath implements the libccp interface by providing function pointers
+            \4 primitives: datapath returns a list of congestion control primitives for the fold function to operate over: ACK, Losses, ECN?, RTT, Rates
+            \4 maintain rate, cwnd
+            \4 IPC mechanism: datapath provides a way to send a message to CCP, and calls a libccp callback upon a CCP response.
+            \4 datapath calls libccp\_invoke() upon every packet (or atomic congestion control timestep) to advance libccp's state machine
+        \3 why have a query processor?
+        \3 fold function primitives: data model
+            \4 ``streaming tuple'': full generality (will this be ready???)
+            \4 higher-level datapath-provided primitives
+\1 Implementation
+    \2 CCP implementation
+        \3 We implemented a CCP in rust, portus
+        \3 library for congestion control binaries to use
+            \4 implements serialization/IPC and language support for communicating with datapath libccp
+    \2 libccp implementation
+        \3 describe fold functions implementation
+            \4 compilation to datapath-friendly instructions. like eBPF, but specialized for congestion control information, and not just in the kernel. It was easier to add libccp support to the kernel than make eBPF work for general datapaths.
+            \4 state machine with registers to run datapath measurement instructions
+\1 Evaluation. Is our proposed design reasonable? Is it OK to react slower than every packet? (3-4 pages)
+    \2 three datapaths
+        \3 Linux kernel
+            \4 describe implementation: pluggable congestion control module
+        \3 mTCP
+        \3 QUIC
+        \3 MPTCP?
+    \2 algorithms:
+        \3 Reno, Cubic, Vegas, Compound, BBR, DCTCP, ABC, Copa(?), PCC(?)
+        \3 Remy?
+            \4 compare updating the CWND within the datapath to once-per-rtt remy
+    \2 update granularity
+        \3 can we support vector batching in the fold function and send the aggregate every packet?
+        \3 strawman design - this will either not perform or consume too much CPU
+    \2 superficial CWND evolution comparison between CCP and in-datapath in emulated path
+    \2 winstein-plot showing overall performance on real paths
+        \3 compare to in-datapath implementations
+    \2 low-rtt paths: radhika's simulation results showing reasonable reactivity in datacenter-like environment (incast scenario).
+        \3 IPC latency benchmarks showing where on radhika's x-axis we will realistically be
+        \3 cost/benefit of reserving a core for CCP process
+            \4 advantages: faster reactions
+            \4 disadvantage: expensive, must use a core
+\1 Discussion (1-2 pages)
+    \2 why is our API better?
+        \3 how general is our API?
+    \2 related work
+        \3 HotCoaCoa (mina/princeton)
+        \3 ``Network Stack as a Service in the Cloud'' hotnets 17
+        \3 congestion manager
+            \4 slow CC
+        \3 various datapaths
+            \4 QUIC
+\end{outline}

@@ -1,0 +1,84 @@
+\documentclass[newfonts=false,format=sigconf,10pt,letterpaper,natbib=false]{acmart}
+\usepackage{geometry}
+%\topmargin -0.5in
+%\headheight 0pt
+%\textheight 9.25in
+%\settopmatter{printacmref=false}
+
+% remove the annoying header on each page
+\fancyhead{}
+
+\input{packages}
+%\captionsetup[figure]{belowskip=-5pt, aboveskip=5pt}
+%\setlength{\abovedisplayskip}{0pt}
+%\setlength{\belowdisplayskip}{-5pt}
+
+% Copyright
+\renewcommand\footnotetextcopyrightpermission[1]{} % removes footnote with conference info
+\setcopyright{none}
+%\setcopyright{acmcopyright}
+%\setcopyright{acmlicensed}
+%\setcopyright{rightsretained}
+%\setcopyright{usgov}
+%\setcopyright{usgovmixed}
+%\setcopyright{cagov}
+%\setcopyright{cagovmixed}
+
+\settopmatter{printacmref=false, printccs=false, printfolios=true}
+
+% DOI
+\acmDOI{}
+
+% ISBN
+\acmISBN{}
+
+%Conference
+%\acmConference[Submitted for review to SIGCOMM]{}
+%\acmYear{2018}
+%\copyrightyear{}
+
+%% {} with no args suppresses printing of the price
+\acmPrice{}
+
+
+\begin{document}
+\title{Restructuring Endpoint Congestion Control}
+%\title{Implementation of an Off-Datapath Congestion Control Plane}
+
+%\titlenote{Produces the permission block, and copyright information}
+%\subtitle{Extended Abstract}
+
+\author{Paper \#99, 13 Pages}
+% \author{Firstname Lastname}
+% \authornote{Note}
+% \orcid{1234-5678-9012}
+% \affiliation{%
+%   \institution{Affiliation}
+%   \streetaddress{Address}
+%   \city{City} 
+%   \state{State} 
+%   \postcode{Zipcode}
+% }
+% \email{email@domain.com}
+
+% The default list of authors is too long for headers}
+%\renewcommand{\shortauthors}{F. Lastname et al.}
+
+\include{abstract}
+
+\maketitle
+
+\input{intro}
+\input{design}
+\input{datapath}
+\input{ccp}
+\input{capabilities}
+%\input{outline}
+\input{eval}
+\input{related}
+\input{concl}
+
+\bibliographystyle{abbrv}
+\bibliography{ccp}
+
+\end{document}
