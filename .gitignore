@@ -1,0 +1,6 @@
+*.aux
+*.bbl
+*.blg
+*.log
+*.out
+_minted-ccp-sigcomm18/
