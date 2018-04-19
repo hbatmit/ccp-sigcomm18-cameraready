@@ -3,5 +3,5 @@
 *.blg
 *.log
 *.out
-_minted-ccp-sigcomm18/
+_minted-ccp-*18/
 ccp-*18.pdf
