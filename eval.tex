@@ -6,24 +6,22 @@
     \caption{Cubic in CCP matches Cubic in Linux TCP.}\label{fig:eval:fidelity:time}
 \end{figure}
 
-We implement a user-space CCP in Rust, called Portus, which implements functionality common across independent congestion control algorithm implementations, including a compiler for the fold function language and a serialization library for IPC communication. 
-We also provide a module for common congestion control calculations such as slow start.
-CCP congestion control algorithms are hence also implemented in Rust; we plan to build Portus bindings for other high-level languages as well.
+We implement a user-space CCP in Rust, called Portus, which implements functionality common across independent congestion control algorithm implementations, including a compiler for the datapath language and a serialization library for IPC communication.
+We also provide a module for common congestion control calculations such as slow start and congestion avoidance.
+CCP congestion control algorithms are hence implemented in Rust; we additionally expose bindings in Python and plan to expose bindings in other languages as well.
 
 \smallskip
 \noindent
-Unless otherwise specified, we evaluated using Linux $4.14.0$ (with a 4-line patch to expose rate measurements to CCP) on a machine with four $2.8$ Ghz cores and $64$ GB memory.
+Unless otherwise specified, we evaluated using Linux $4.14.0$ on a machine with four $2.8$ Ghz cores and $64$ GB memory.
 
 \paragrapha{Fidelity (\S\ref{sec:eval:fidelity})} Do algorithms implemented in CCP behave similarly to algorithms implemented within the datapath? Using the Linux kernel datapath as a case study, we explore both achieved throughput and delay for persistently backlogged connections as well as achieved flow completion time for dynamic workloads.
 
 \paragrapha{Overhead of datapath communication (\S\ref{sec:eval:whyfold})} How expensive is communication between CCP and the datapath?
 
-\paragrapha{Low-RTT simulations (\S\ref{sec:eval:lowrtt})} We evaluate CCP in a simulated low-RTT datacenter-like environment.
-
 \subsection{Fidelity}
 \label{sec:eval:fidelity}
 
-The Linux kernel is the most mature datapath we consider. Therefore, we present an in-depth exploration of congestion control outcomes comparing CCP and native-kernel implementations of two widely used congestion control algorithms: NewReno~\cite{newreno} and Cubic~\cite{cubic}. 
+The Linux kernel is the most mature datapath we consider. Therefore, we present an in-depth exploration of congestion control outcomes comparing CCP and native-kernel implementations of two widely used congestion control algorithms: NewReno~\cite{newreno} and Cubic~\cite{cubic}.
 As an illustrative example, Figure~\ref{fig:eval:fidelity:time} shows one such comparison of congestion window update decisions over time on an emulated $96$ Mbit/s fixed-rate Mahimahi~\cite{mahimahi} link with a $20$ ms RTT.
 We expect and indeed observe minor deviations as the connection progresses and small timing differences between the two implementations cause the window to differ, but overall,
 not only does CCP's implementation of Cubic exhibit a window update consistent with a cubic increase function, but its updates closely match the kernel implementation.
@@ -87,15 +85,15 @@ To measure flow completion times (FCT), we use a flow size distribution compiled
 To generate traffic, we use an empirical traffic generator to sample flow sizes from the distribution and send flows of that size in an incast traffic pattern to a single client behind the emulated Mahimahi link. We generate flows with 50\% link load, and generate $100,000$ flows to the client in a closed loop from $50$ sending servers using persistent connections to the client.
 We used Reno as the congestion control algorithm in both cases. To ensure that the kernel-native congestion control ran under the same conditions as the CCP implementation, we disabled the slow-start-after-idle option.
 
-Of the $100,000$ flows we sampled from the CAIDA workload, $97,606$ were $10$ KB or less, comprising $487$ MB, while the $95$ flows greater than $1$ MB in size accounted for $907$ MB out of the workload's total of $1.7$ GB. 
+Of the $100,000$ flows we sampled from the CAIDA workload, $97,606$ were $10$ KB or less, comprising $487$ MB, while the $95$ flows greater than $1$ MB in size accounted for $907$ MB out of the workload's total of $1.7$ GB.
 
 Across all flow sizes, CCP achieves FCTs 0.02\% lower than the kernel in the median, 3\% higher in the $75^{\text{th}}$ percentile, and $30$\% higher in the $95^{\text{th}}$ percentile.
 
-\paragrapha{Small flows} Flows less than $10$ KB in size, shown in Figure~\ref{fig:eval:fidelity:fct:sml}, are essentially unaffected by congestion control. These flows, the vast majority of flows in the system, complete before either CCP algorithms or kernel-native algorithms make any significant decisions about them. 
+\paragrapha{Small flows} Flows less than $10$ KB in size, shown in Figure~\ref{fig:eval:fidelity:fct:sml}, are essentially unaffected by congestion control. These flows, the vast majority of flows in the system, complete before either CCP algorithms or kernel-native algorithms make any significant decisions about them.
 
 \paragrapha{Medium flows} Flows between $10$ KB and $1$ MB in size, in Figure~\ref{fig:eval:fidelity:fct:med}  achieve $7\%$ lower FCT in the median with CCP because CCP slightly penalizes long flows due to its slightly longer update period, freeing up bandwidth for medium size flows to complete.
 
-\paragrapha{Large flows} CCP penalizes some flows larger than $1$ MB in size compared to the native-kernel implementation: $22$\% worse in the median (Figure~\ref{fig:eval:fidelity:fct:big}). 
+\paragrapha{Large flows} CCP penalizes some flows larger than $1$ MB in size compared to the native-kernel implementation: $22$\% worse in the median (Figure~\ref{fig:eval:fidelity:fct:big}).
 
 \subsection{Performance}
 \label{sec:eval:whyfold}
@@ -108,7 +106,7 @@ Across all flow sizes, CCP achieves FCTs 0.02\% lower than the kernel in the med
     \caption{Minimum time required to send information to the datapath and receive a response using different IPC mechanisms. The dotted lines show latency when the process is bound to a single CPU core.}\label{fig:eval:ipc-latency}
 \end{figure}
 
-Because Portus runs in a different address space than datapath code, there is some delay between the datapath gathering a summary and algorithm code acting upon the report due to overheads in inter-process
+Because Portus runs in a different address space than datapath code, there is some delay between the datapath gathering a report and algorithm code acting upon the report due to overheads in inter-process
 %(or communication from the kernel datapath)
 communication (IPC).
 In the worst case, a severely delayed measurement could cause an algorithm to make an erroneous window update.

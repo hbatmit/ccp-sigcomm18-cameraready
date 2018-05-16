@@ -44,8 +44,16 @@
 \leading{12pt}
 %
 \usepackage{minted}
+\usepackage{listings}
+\lstset{
+  columns=flexible,
+  mathescape,
+  keepspaces=true,
+  escapeinside={(*}{*)},
+  basicstyle=\ttfamily\small  
+}
 %
-\usepackage[subtle]{savetrees}
+%\usepackage[subtle]{savetrees}
 \usepackage[small,compact]{titlesec}
 \usepackage{outlines}
 %
@@ -81,3 +89,8 @@
 \newcommand{\kernelspace}{kernel-space\xspace}
 %
 \newcommand{\controller}{agent\xspace}
+
+\newcommand{\ct}[1]{{\tt #1}}
+\newcommand{\ngs}[1]{{\textcolor{red}{NG: #1}}}
+\newcommand{\Para}[1]{\vspace{4pt}\noindent{\bf #1}}
+\newcommand{\Sec}[1]{\S\ref{#1}}

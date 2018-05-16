@@ -21,21 +21,21 @@ which naturally restricts the computation an algorithm can perform.
 By contrast, CCP algorithms are decoupled from the ACK clock.
 Although congestion signals must still be acquired and summarized at ever-faster rates, CCP algorithms can to amortize computation across different time scales, and use sophisticated data structures and computations that may be unwise on datapaths like the kernel.
 
-One such algorithmic technique, proposed in concurrently submitted work\footnote{Paper \#97: Elasticity Detection: A Building Block for Delay-Sensitive Congestion Control}, uses CCP to compute Fourier transforms on estimates of cross traffic and infer whether it is elastic (buffer-filling) or not.
+One such algorithmic technique we propose~\cite{nimbus}, uses CCP to compute Fourier transforms on estimates of cross traffic and infer whether it is elastic (buffer-filling) or not.
 A key component of this technique involves sending traffic in an asymmetric sinusoidal pulse pattern and using the sending and receiving rates measured over an RTT to produce a time-series of cross-traffic rates. The method then computes the FFT of this series and infers elasticity if the FFT at particular frequencies is large.
 
 In principle, it may be possible to implement such sinusoidal pulses within the datapath, but computing the FFT is unlikely to be practical both due to the timing requirements of the ACK clock as well as the difficulty of performing complex calculations in restrictive programming environments such as the kernel. Moreover, implementing the transmitter outside the datapath in CCP allowed the researchers to iterate through many ideas more quickly than if they had to write kernel code.
 %Figure~\ref{fig:capabilities:nimbus-example} shows this pulse pattern and the result of the FFT computation.
-We anticipate that in the future CCP will enable the use of other similarly powerful but computationally-intensive methods such as neural networks.
+We anticipate that in the future, CCP will enable the use of other similarly powerful but computationally-intensive methods such as neural networks.
 
 \subsection{Velocity of Development}
 \label{s:capabilities:velocity}
 
-Copa~\cite{copa} is a recently proposed model-based congestion control algorithm that seeks to maintain a target rate that is inversely proportional to the queuing delay, estimated as the difference of the current RTT and the minimum RTT. 
-Under three network models, this is shown to provide quantifiably low delay, and fair and efficient allocation of bandwidth. 
-It is robust to non-congestive loss, buffer-bloat, and unequal propagation delays. It includes mechanisms to provide TCP competitiveness, accurate minimum RTT estimation, and imperfect pacing. 
+Copa~\cite{copa} is a recently proposed model-based congestion control algorithm that seeks to maintain a target rate that is inversely proportional to the queuing delay, estimated as the difference of the current RTT and the minimum RTT.
+Under three network models, this is shown to provide quantifiably low delay, and fair and efficient allocation of bandwidth.
+It is robust to non-congestive loss, buffer-bloat, and unequal propagation delays. It includes mechanisms to provide TCP competitiveness, accurate minimum RTT estimation, and imperfect pacing.
 
-The authors of Copa used CCP to implement Copa recently, and in the process discovered a small bug that produced an erroneous minimum RTT estimate due to ACK compression. They solved this problem with a small modification to the Copa fold function,
+The authors of Copa used CCP to implement Copa recently, and in the process discovered a small bug that produced an erroneous minimum RTT estimate due to ACK compression. They solved this problem with a small modification to the Copa fast path,
 and in a few hours were able to improve the performance of their earlier user-space implementation. The improvement is summarized here:\\
 
     \begin{tabular}{c|c|c}
@@ -52,17 +52,21 @@ After the ACK compression bug was fixed in the CCP version, Copa achieves higher
 \label{s:capabilities:agg}
 
 % from nimbus nsdi submission's intro
-Congestion control on the Internet is performed by individual TCP connections. Each connection independently probes for bandwidth, detects congestion on its path, and reacts to it. 
-This per-connection paradigm for congestion control has served the Internet well for 30 years, but is a poor fit in many modern traffic control scenarios where a large number of nodes exchange traffic between a few sites. 
-Examples include: traffic between different datacenters~\cite{b4, swan}; traffic between campuses of an organization; traffic between collaborating universities or companies; traffic between a large content provider (e.g., Netflix) and a network with many clients (e.g., a regional ISP); large-scale data backups from an organization to an external site; etc. 
+Congestion control on the Internet is performed by individual TCP connections. Each connection independently probes for bandwidth, detects congestion on its path, and reacts to it.
+This per-connection paradigm for congestion control has served the Internet well for 30 years, but is a poor fit in many modern traffic control scenarios where a large number of nodes exchange traffic between a few sites.
+Examples include: traffic between different datacenters~\cite{b4, swan}; traffic between campuses of an organization; traffic between collaborating universities or companies; traffic between a large content provider (e.g., Netflix) and a network with many clients (e.g., a regional ISP); large-scale data backups from an organization to an external site; etc.
 
-A more modest use case is to implement the per-host aggregation proposed by the Congestion Manager two decades ago~\cite{cm}. We used CCP to develop a host-level aggregate controller that maintains a single aggregate window or rate for a group of flows and allocates that to individual flows---{\em all with minimal changes to the datapath}.
+A more modest use case is to implement the per-host aggregation proposed by the
+Congestion Manager two decades ago~\cite{cm}. We used CCP to develop a
+host-level aggregate controller that maintains a single aggregate window or rate
+for a group of flows and allocates that to individual flows---{\em all with no
+  changes to the non-CCP parts of the datapath.}
 
 %
 %Since CCP has visibility into all the flows in the system, it is uniquely positioned as a platform on which users can implement aggregate congestion control.
 %In fact, we make a small modification to CCP to support flow aggregation and show that a proof-of-concept implementation can reduce average flow completion times by \an{XXX}\%.
 
-\paragrapha{Interface} In addition to the \texttt{create()} and \texttt{onReport()} event handlers, we introduce two new APIs for aggregate congestion controllers: \texttt{create\_subflow()} and \texttt{aggregateBy()}. 
+\paragrapha{Interface} In addition to the \texttt{create()} and \texttt{onReport()} event handlers, we introduce two new APIs for aggregate congestion controllers: \texttt{create\_subflow()} and \texttt{aggregateBy()}.
 CCP uses \texttt{aggregateBy()} to classify new connections into aggregates. Then, it calls either the existing \texttt{create()} handler in the case of a new aggregate, or the \texttt{create\_subflow()} handler in the case of an already active one.
 
 These handlers are natural extensions of the existing per-flow API; we implemented API support for aggregation in $80$ lines of code in our Rust CCP implementation (\S\ref{sec:eval}).
@@ -77,25 +81,6 @@ Algorithms can aggregate flows using the connection 5-tuple, passed as an argume
 
 As a proof of concept, we implement an algorithm which simply aggregates all flows on each of the hosts's interfaces into one aggregate and assigns the window in equal portions to each sub-flow.
 Figure~\ref{fig:cap:agg} shows the aggregator instantaneously apportioning equal windows to each flow in its domain.
- 
-%\begin{outline}
-%\1 Today, the congestion control problem is solved independently by each flow in the Internet.
-%\1 As a result, congestion control state is distributed amongst various flows in a domain or system.
-%\1 In these cases, even flows on the same system must communicate only indirectly.
-%\1 CCP can easily be modified to allow for this use case.
-%    \2 We implement a proof-of-concept flow aggregator in portus.
-%    \2 Aggregating congestion control algorithms must implement only one additional interface, containing two functions.
-%    \2 First, since the \texttt{create()} method defines new aggregates, the aggregate must define \texttt{new\_flow()} to accept a new connection into the aggregate.
-%    \2 Second, algorithms must specify how to group flows into aggregates. The aggregate is given the 5-tuple of new connections, and can hash these connections into congestion aggregates.
-%    \2 For example, the simplest aggregator might aggregate all the flows in a host by aggregating the source IP address, and remove slow start for these flows, instead choosing to simply set a known good congestion window.
-%\1 As a proof of concept of the power of CCP's abstractions, we implement an aggregating congestion controller aimed at reducing flow completion times on a host.
-%    \2 To support this, we add an additional measurement signal exposing the amount of backlogged data per connection to CCP.
-%    \2 Because the aggregating CCP has a global view of demand and congestion state, it can more efficiently allocate resources to flows which need them.
-%    \2 \an{srinivas's graphs}
-%\1 Aggregation Evaluation
-%    \2 GRAPH: show a single congestion control controlling several aggregate flows.
-%    \2 this was a small change, had to add one more interface, entirely in userspace, to allow specification of which flows to aggre gate.
-%\end{outline}
 
  
 \subsection{Write-Once, Run-Anywhere}

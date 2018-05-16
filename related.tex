@@ -1,30 +1,9 @@
 \section{Related Work}
 \label{s:relwork}
 %The CCP aims to provide a API for congestion control that decouples congestion control logic from the datapath, while keeping accurate measurement information from the datapath.
+\paragrapha{Congestion Control API}
+Linux includes a pluggable TCP API~\cite{lwn-pluggable-tcp}, which exposes various statistics for every connection, including delay, rates averaged over the past RTT, ECN information, timeouts, and packet loss.
+icTCP~\cite{icTCP} is a modified TCP stack in the Linux kernel that allows user-space programs to modify specific TCP-related variables, such as the congestion window, slow start threshold, receive window size, and retransmission timeout. QUIC~\cite{quic} also offers pluggable congestion control. CCP extracts common primitives for congestion control across multiple datapaths, supporting off-datapath programmability with the performance of in-datapath implementations. 
 
-eBPF~\cite{ebpf} allows developers to define programs that can be safely executed in the Linux kernel. These programs can be attached to kernel functions and used for debugging. We considered compiling CCP's user defined fold functions into eBPF instructions to ensure safe execution in the kernel datapath. However, the congestion signals in Table~\ref{tab:datapath:signals} are not easily accessible by eBPF programs. In addition, implementing our own fold function language within \texttt{libccp} allows portability to other datapaths. 
-%CCP's fold function language is limited to ensure safe execution of user defined programs.
-
-Linux includes a pluggable TCP API~\cite{lwn-pluggable-tcp}, which exposes various statistics for every connection, including delay, rates averaged over the past RTT, ECN information, timeouts, and packet loss. 
-icTCP~\cite{icTCP} is a modified TCP stack in the Linux kernel that allows user-space programs to modify specific TCP-related variables, such as the congestion window, slow start threshold, receive window size, and retransmission timeout. QUIC~\cite{quic} also offers pluggable congestion control. CCP extracts common primitives for congestion control across multiple datapaths, supporting off-datapath programmability with the performance of in-datapath implementations.
-
-HotCocoa~\cite{hotcocoa} introduces a domain specific language to allow developers to compile congestion control algorithms directly into  programmable NICs to increase efficiency in packet processing. By contrast, CCP allows developers to write algorithms in user-space with the full benefit of libraries and conveniences such as  floating point operations (\eg for Fourier transforms). 
-% in their congestion control algorithms traditionally not available in hardware. 
-In addition, the congestion signals exposed by CCP datapaths are not tied to the ACK clock, allowing users to implement a wider class of algorithms. 
-
-\if 0
-The CCP API automatically supports ``write once, run everywhere'' behavior, so algorithms can instantly be run on various datapaths. CCP's fold functions also provides accurate per-packet calculations over congestion signals, and CCP methods run at kernel rates, even through the CCP runs in user-space.
-\fi
-
-Structured Streams~\cite{structuredstreams} is a datapath that proposes preventing head-of-line blocking by managing streams between the the same two hosts together, and applying a hereditary structure on streams. CCP does not change the underlying structure of the transport on the datapath; the Linux kernel datapath, for example, uses TCP streams. The congestion manager (CM~\cite{cm}) introduces an in-kernel agent to perform congestion control operations for a group of flows together. CCP is the first system to both provide flow aggregation capabilities \textit{and} an API for developers to develop novel algorithms, and it does so with few changes to the datapath.
-
-There is a wide range of previous literature on moving kernel functionality into user-space. 
-The Exokernel~\cite{exokernel} is an operating system architecture that securely
-exports hardware functionality into untrusted user-space library operating systems.  
-Arrakis~\cite{arrakis2014} is system that facilitates kernel-bypass networking for applications via SR-IOV. 
-IX~\cite{ix} is a dataplane operating system that separates the management functionality of the kernel from packet processing. 
-Alpine~\cite{alpine} moves all of IP and TCP layer into user-space.
-Whereas these systems use hardware virtualization to allow applications to have finer grained control over their networking resources,
-CCP exposes only congestion control information to user-space. 
-Moreover, CCP is also agnostic to the datapath; datapaths for library operating systems could support the CCP API as well.
-%Other systems aim to move the entire networking stack into userspace~\cite{thekkath,alpine}. 
+\paragrapha{Kernel fastpath execution}
+eBPF~\cite{ebpf} allows developers to run code safely inside the Linux Kernel by attaching probes to kernel functions; these can be used for debugging purposes. TCP BPF~\cite{tcpbpf} is an extension on top of BPF that allows customization of TCP connection settings, such as the TCP buffer size or SYN RTO, based on socket information such as IP address and port number. While it may be possible to develop a BPF backend to execute CCP fastpath programs, unlike \ct{libccp}, this method is not portable to other datapaths. Exploring BPF support in CCP remains future work.

@@ -5,3 +5,4 @@
 *.out
 _minted-ccp-*18/
 ccp-*18.pdf
+*.synctex.gz
