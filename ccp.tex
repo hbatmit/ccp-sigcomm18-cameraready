@@ -225,3 +225,77 @@ best suited to their performance requirements and choice of implementation compl
     Our CCP implementation of BBR used for a bulk transfer over a 96 Mbit/s link with a 100 ms RTT. The bandwidth probe phase can be seen in the oscillation of the queueing delay, and the RTT probe phase can be seen in the periodic dips in throughput.
     }\label{fig:ccp:bbr}
 \end{figure}
+
+\subsection{Case Study: Slow Start}
+\label{s:ccp:semantics}
+
+Because algorithms no longer make decisions upon every ACK, CCP changes the way in which developers should think about congestion control, and correspondingly provides multiple implementation choices. As a result, new issues arise about where to place algorithm functionality. We discuss the involved trade-offs with an illustrative example: slow start.
+
+Slow start is a widely used congestion control module in which a connection probes for bandwidth by multiplicately increasing its congestion window (\texttt{cwnd}) every RTT. Most implementations increment \texttt{cwnd} per ACK, either by the number of bytes acknowledged in the ACK, or by 1 MSS. With CCP, one way to implement slow start is to retain the logic entirely in the CCP algorithm code, and measure the size of the required window update with a fold function. We show an example in Listing~\ref{lst:ccp:ss}. This implementation strategy is semantically closest in behavior to native datapath implementations.
+
+\begin{listing}[t]
+{\footnotesize
+\begin{minted}{rust}
+fn create(...) {
+  datapath.install("
+  (def (Report (volatile acked 0) (volatile loss 0)))
+  (when true (:= Report.acked (+ Report.acked Ack.bytes_acked)))
+  (when (> Micros Flow.rtt_sample_us) (report) (reset))
+  ");
+}
+fn onReport(...) {
+  let acked = report.get_field("Summary.acked");
+  self.cwnd += acked;
+  datapath.install_pattern(
+    SetCwndAbs(self.cwnd) => WaitRtts(1.0) => Report());
+}
+\end{minted}
+}
+\caption{A CCP implementation of slow start (ending slow start not shown).} \label{lst:ccp:ss}
+\end{listing}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\columnwidth]{img/ss-evo}
+    \caption{Different implementations of slow start have different window update characteristics. The control pattern implementation is rate-based, so we show the congestion window corresponding to the achieved throughput over each RTT.}
+    \label{fig:ccp:ss}
+\end{figure}
+
+For some workloads this approach may prove problematic, depending on the parameters of the algorithm. If the reporting period defined is large, then infrequent slow start updates can cause connections to lose throughput.
+Figure~\ref{fig:ccp:ss} demonstrates, on a $48$ Mbps, $100$ ms RTT link, different implementations of slow start exhibit differing window updates relative to the Linux kernel baseline.
+An implementation with a 1-RTT reporting period lags behind the kernel, but it is also possible to implement slow start within the fold function (Listing~\ref{lst:ccp:ssfold}), or in a control pattern: 
+
+\begin{minted}{rust}
+WaitRtts(1.0) => SetRateRel(2.0)
+\end{minted}
+
+As outlined in \S\ref{s:design}, the programming model of fold functions is deliberately limited.
+First, we envision that in the future, CCP will support low-level hardware datapaths---the simpler the fold function execution environment is, the easier these hardware implementations will be. Second, algorithms able to make complex decisions on longer time-scales will naturally do so to preserve cycles for the application and datapath; as a result, complex logic inside the fold function may not be desirable.
+
+Meanwhile, a control pattern is an easy way to program static behavior into the datapath, but is inflexible: CCP algorithms implementing slow start in a control pattern must be careful to exit slow start at the correct time; the control pattern will continue to scale the sending rate exponentially until it is replaced.
+
+\smallskip
+
+More broadly, developers may choose among various points in the algorithm design space. 
+On one extreme, algorithms may be implemented almost entirely in CCP, using the fold function as a simple measurement query language.
+On the other extreme, CCP algorithms may merely specify transitions between in-datapath fold functions implementing the primary control logic of the algorithm.
+It is important to note, however, that some configurations, \eg making updates to the congestion window both in the fold function as well as via the send pattern makes the resulting algorithm difficult to reason about since the updates are not synchronized.
+Ultimately, users will be able to choose the algorithm implementation best suited to their congestion control logic and application needs.
+
+\begin{listing}[t]
+{\footnotesize
+\begin{minted}{rust}
+fn create(...) {
+  datapath.install_fold(sock_id, "
+  (def (Summary.loss 0))
+  (:= Cwnd (+ Cwnd A.bytes_acked))
+  (:= isUrgent (> A.lost_packets 0))
+  ");
+}
+fn onReport(...) {
+  // exit slow start
+}
+\end{minted}
+}
+\caption{A within-fold implementation of slow start. Note that CCP algorithm code is not invoked at all until the connection experiences its first loss.} \label{lst:ccp:ssfold}
+\end{listing}
