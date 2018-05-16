@@ -75,7 +75,7 @@ Algorithms can aggregate flows using the connection 5-tuple, passed as an argume
 \begin{figure}
     \centering
     \includegraphics[width=\columnwidth]{img/stair}
-    \caption{$5$ 20-second iperf flows with $10$ second staggered starts. While Reno (right) must individually probe for bandwidth for each new connection, and aggregating congestion controller is able to immediately set the connection's congestion window to the fair share value.}
+    \caption{$5$ 20-second iperf flows with $10$ second staggered starts. While Reno (right) must individually probe for bandwidth for each new connection, an aggregating congestion controller is able to immediately set the connection's congestion window to the fair share value.}
     \label{fig:cap:agg}
 \end{figure}
 
