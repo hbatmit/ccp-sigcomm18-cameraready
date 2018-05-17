@@ -67,15 +67,13 @@ On a report, CCP calls the \ct{onReport()} handler,
 allowing the congestion control algorithm to set the flow's congestion
 window or sending rate, or replace the datapath program with different logic.
 
-\Para{Datapath programs.} CCP's datapath programs are written in a restrictive
+\paragrapha{Datapath programs} CCP's datapath programs are written in a restrictive
 domain-specific language.
 Conceptually, datapath programs contain state initializations, \ie a \ct{def}
 clause, and event specifications, \ie a series of \ct{when} clauses.
 The fast path checks event conditions on every incoming packet and timeout event.
-If an event condition evaluates to true, \eg (in this example) the number of lost packets is
-greater than zero, the body of the \ct{when} clause is executed as the corresponding
+If an event condition evaluates to true, the body of the \ct{when} clause is executed as the corresponding
 action.
-%
 For example, the following program counts the cumulative
 number of packets acknowledged and lost, and it reports these counters immediately upon a loss:
 
@@ -92,9 +90,9 @@ number of packets acknowledged and lost, and it reports these counters immediate
 
 Here, \texttt{(when true ...)} signifies that the body should be evaluated on every packet.
 Correspondingly, \texttt{(fallthrough)} indicates that subsequent \texttt{when} clauses should be evaluated.
-The \ct{report} instruction causes 
+The \ct{report} instruction causes the datapath to
 transmit the \ct{acked} and \ct{lost} byte counters to the slow path whenever
-the \ct{lost} counter becomes nonzero.
+the \ct{lost} counter becomes greater than zero.
 Since \ct{acked} and \ct{lost} are marked \ct{volatile}, these values are reset to their initial value, 0, 
 after every call to \ct{report}.
 
@@ -106,7 +104,35 @@ from the packet, the number of bytes that the stack believes have been dropped
 by the network, the delivery rate of packets at the receiver, and so on.
 Table~\ref{tab:api} enumerates the primitive congestion signals we support.
 
-\Para{Example: BBR.} As a more involved example, we show below
+\paragrapha{CCP Algorithm Logic} The \ct{onReport()} handler provides a way to
+implement congestion control actions in \userspace in reaction to reports from the datapath.
+For example, a simple additive-increase
+multiplicative-decrease (AIMD) algorithm could be implemented in Python\footnote{Our CCP implementation is in Rust and exposes Python bindings.} using
+the \ct{acked} and \ct{lost} bytes reported every round-trip time from the datapath:
+
+{\footnotesize
+\begin{minted}{python}
+def onReport(self, report):
+  if report["lost"] > 0:
+     self.cwnd = self.cwnd / 2
+  else:
+     acked = report["acked"]
+     self.cwnd = self.cwnd + acked*MSS/self.cwnd
+  self.update("cwnd", self.cwnd/MSS)
+\end{minted}
+}
+
+We have implemented complex functionality within congestion control algorithms
+by leveraging slow-path logic, for example, a congestion control
+algorithm that uses signal processing techniques~\cite{nimbus}.
+
+If the round-trip time of the network is a few milliseconds or more,
+it is possible to locate congestion control algorithm logic entirely within CCP
+with high fidelity relative to a per-packet update algorithm, as we show in \S\ref{sec:eval:fidelity}.
+
+\subsection{Example: BBR}
+\label{s:ccp:bbr}
+As a more involved example, we show below
 how various components of TCP BBR~\cite{bbr} are implemented using the CCP API.
 A BBR sender estimates the rate of packets delivered to the receiver, and sets
 its sending rate to the maximum delivered rate (over a sliding time
@@ -165,41 +191,6 @@ CCP's split programming model enables such flexible partitioning of
 functionality, whereby complex operations and special cases can be implemented
 in \userspace.
 
-\Para{Slow path programs.} The \ct{onReport()} handler provides a way to
-implement congestion control actions in \userspace in reaction to reports from the datapath.
-For example, a simple additive-increase
-multiplicative-decrease (AIMD) algorithm could be implemented in Python\footnote{Our CCP implementation is in Rust and exposes Python bindings.} using
-the \ct{acked} and \ct{lost} bytes reported every round-trip time from the datapath:
-
-{\footnotesize
-\begin{minted}{python}
-def onReport(self, report):
-  if report["lost"] > 0:
-     self.cwnd = self.cwnd / 2
-  else:
-     acked = report["acked"]
-     self.cwnd = self.cwnd + acked*MSS/self.cwnd
-  self.update("cwnd", self.cwnd/MSS)
-\end{minted}
-}
-
-We have implemented complex functionality within congestion control algorithms
-by leveraging slow-path logic, for example, a congestion control
-algorithm that uses signal processing techniques~\cite{nimbus}.
-
-If the round-trip time of the network is a few milliseconds or more,
-it is possible to implement any congestion control algorithm completely in \userspace
-with high fidelity relative to a per-packet update algorithm, as we show in \S\ref{sec:eval:fidelity}.
-More broadly, developers may choose among various points in the algorithm design
-space.
-On one extreme, algorithms may be implemented almost entirely in \userspace,
-using the fast path only as a queryable database of per-packet signals.
-On the other extreme, CCP algorithms in \userspace may merely specify
-transitions between fast path programs that implement the primary logic of the
-algorithm.
-Ultimately, users will partition algorithm functionality in the way
-best suited to their performance requirements and choice of implementation complexity.
-
 \begin{figure}[t]
 \centering
     \includegraphics[width=\columnwidth]{img/bbr}
@@ -209,7 +200,7 @@ best suited to their performance requirements and choice of implementation compl
 \end{figure}
 
 \subsection{Case Study: Slow Start}
-\label{s:ccp:semantics}
+\label{s:ccp:ss}
 
 Because algorithms no longer make decisions upon every ACK, CCP changes the way in which developers should think about congestion control, and correspondingly provides multiple implementation choices. As a result, new issues arise about where to place algorithm functionality. We discuss the involved trade-offs with an illustrative example: slow start.
 
@@ -254,17 +245,12 @@ An implementation with a 1-RTT reporting period lags behind the kernel, but it i
 \end{minted}
 }
 
-As outlined in \S\ref{s:design}, the programming model of fold functions is deliberately limited.
+\paragrapha{Take-away} As outlined in \S\ref{s:design}, the programming model of fold functions is deliberately limited.
 First, we envision that in the future, CCP will support low-level hardware datapaths---the simpler the fold function execution environment is, the easier these hardware implementations will be. Second, algorithms able to make complex decisions on longer time-scales will naturally do so to preserve cycles for the application and datapath; as a result, complex logic inside the fold function may not be desirable.
-
-Meanwhile, a control pattern is an easy way to program static behavior into the datapath, but is inflexible: CCP algorithms implementing slow start in a control pattern must be careful to exit slow start at the correct time; the control pattern will continue to scale the sending rate exponentially until it is replaced.
-
-\smallskip
 
 More broadly, developers may choose among various points in the algorithm design space. 
 On one extreme, algorithms may be implemented almost entirely in CCP, using the fold function as a simple measurement query language.
 On the other extreme, CCP algorithms may merely specify transitions between in-datapath fold functions implementing the primary control logic of the algorithm.
-It is important to note, however, that some configurations, \eg making updates to the congestion window both in the fold function as well as via the send pattern makes the resulting algorithm difficult to reason about since the updates are not synchronized.
 Ultimately, users are able to choose the algorithm implementation best suited to their congestion control logic and application needs.
 
 \begin{listing}[t]
