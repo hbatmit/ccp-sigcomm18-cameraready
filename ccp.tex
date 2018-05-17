@@ -45,7 +45,7 @@
         \texttt{Timer} & Multi-resolution timer that can be zeroed by a call to \ct{reset} \\
     \end{tabular}
     %\vspace{0.075in}
-    \caption{Fast path language: primitive signals, operators, and scopes.}\label{tab:api}
+    \caption{Datapath language: primitive signals, operators, and scopes.}\label{tab:api}
 \end{table}
 
 Writing an algorithm in CCP involves two considerations: logic in CCP and in the datapath.
@@ -58,7 +58,7 @@ the datapath.
 Implementing the CCP portion of an algorithm involves writing two callback methods:
 \ct{onCreate()} and \ct{onReport()}.
 In turn, the \texttt{onCreate()} function should install an
-event-driven program in the fast path.
+event-driven program in the datapath.
 Programs running in the datapath could compute summaries over per-packet
 information (such as a minimum packet delay or a moving average of packet
 delivery rate) and explicitly report summaries or high priority conditions
@@ -71,7 +71,7 @@ window or sending rate, or replace the datapath program with different logic.
 domain-specific language.
 Conceptually, datapath programs contain state initializations, \ie a \ct{def}
 clause, and event specifications, \ie a series of \ct{when} clauses.
-The fast path checks event conditions on every incoming packet and timeout event.
+The datapath checks event conditions on every incoming packet and timeout event.
 If an event condition evaluates to true, the body of the \ct{when} clause is executed as the corresponding
 action.
 For example, the following program counts the cumulative
@@ -96,7 +96,7 @@ the \ct{lost} counter becomes greater than zero.
 Since \ct{acked} and \ct{lost} are marked \ct{volatile}, these values are reset to their initial value, 0, 
 after every call to \ct{report}.
 
-Fast path programs have read access to {\em primitive congestion signals} 
+Datapath programs have read access to {\em primitive congestion signals} 
 (prefixed with ``\ct{Ack.}'' or ``\ct{Flow.}'' to specify their measurement period) that are
 exposed by the kernel on every incoming packet.
 Such signals include statistics such as the round trip delay sample obtained
