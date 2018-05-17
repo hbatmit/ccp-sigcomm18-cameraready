@@ -1,12 +1,18 @@
 \section{New Capabilities}
 \label{s:capabilities}
- \begin{figure*}[t!]
- \centering
-     \includegraphics[width=2\columnwidth]{img/datapath-compare.pdf}
-     \caption{Comparison of \textit{the same} CCP implementation of Cubic and Copa run on three \textit{different} datapaths with a fixed-rate bottleneck link. %The congestion window naturally evolves differently on each datapath, but the characteristic shapes of both algorithms are clearly visible.
-     }\label{fig:datapaths:wora}
- \end{figure*}
 
+\begin{figure}
+    \centering
+    \includegraphics[width=\columnwidth]{img/stair}
+    \caption{$5$ 20-second iperf flows with $10$ second staggered starts. While Reno (right) must individually probe for bandwidth for each new connection, an aggregating congestion controller is able to immediately set the connection's congestion window to the fair share value.}
+    \label{fig:cap:agg}
+\end{figure}
+\begin{figure*}[t!]
+    \centering
+    \includegraphics[width=2\columnwidth]{img/datapath-compare.pdf}
+    \caption{Comparison of \textit{the same} CCP implementation of Cubic and Copa run on three \textit{different} datapaths with a fixed-rate bottleneck link. %The congestion window naturally evolves differently on each datapath, but the characteristic shapes of both algorithms are clearly visible.
+    }\label{fig:datapaths:wora}
+\end{figure*}
 
 We present four new capabilities enabled by CCP: new classes of congestion control, rapid development and testing of algorithms, congestion control for flow aggregates, and the ability to write an algorithm once and run it on multiple datapaths.
 
@@ -71,13 +77,6 @@ CCP uses \texttt{aggregateBy()} to classify new connections into aggregates. The
 
 These handlers are natural extensions of the existing per-flow API; we implemented API support for aggregation in $80$ lines of code in our Rust CCP implementation (\S\ref{sec:eval}).
 Algorithms can aggregate flows using the connection 5-tuple, passed as an argument to \texttt{aggregateBy()}.
-
-\begin{figure}
-    \centering
-    \includegraphics[width=\columnwidth]{img/stair}
-    \caption{$5$ 20-second iperf flows with $10$ second staggered starts. While Reno (right) must individually probe for bandwidth for each new connection, an aggregating congestion controller is able to immediately set the connection's congestion window to the fair share value.}
-    \label{fig:cap:agg}
-\end{figure}
 
 As a proof of concept, we implement an algorithm which simply aggregates all flows on each of the hosts's interfaces into one aggregate and assigns the window in equal portions to each sub-flow.
 Figure~\ref{fig:cap:agg} shows the aggregator instantaneously apportioning equal windows to each flow in its domain.
