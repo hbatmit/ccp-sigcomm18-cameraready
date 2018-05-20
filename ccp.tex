@@ -204,7 +204,7 @@ in \userspace.
 
 Because algorithms no longer make decisions upon every ACK, CCP changes the way in which developers should think about congestion control, and correspondingly provides multiple implementation choices. As a result, new issues arise about where to place algorithm functionality. We discuss the involved trade-offs with an illustrative example: slow start.
 
-Slow start is a widely used congestion control module in which a connection probes for bandwidth by multiplicately increasing its congestion window (\texttt{cwnd}) every RTT. Most implementations increment \texttt{cwnd} per ACK, either by the number of bytes acknowledged in the ACK, or by 1 MSS. With CCP, one way to implement slow start is to retain the logic entirely in CCP, and measure the size of the required window update from datapath reports. We show an example in Listing~\ref{lst:ccp:ss}. This implementation strategy is semantically closest in behavior to native datapath implementations.
+Slow start is a widely used congestion control module in which a connection probes for bandwidth by multiplicatively increasing its congestion window (\texttt{cwnd}) every RTT. Most implementations increment \texttt{cwnd} per ACK, either by the number of bytes acknowledged in the ACK, or by 1 MSS. With CCP, one way to implement slow start is to retain the logic entirely in CCP, and measure the size of the required window update from datapath reports. We show an example in Listing~\ref{lst:ccp:ss}. This implementation strategy is semantically closest in behavior to native datapath implementations.
 
 \begin{listing}[t]
 {\footnotesize

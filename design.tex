@@ -148,7 +148,7 @@ The same-address-space CCP would require a substantial re-design for this mode o
 
 Our design supports both modes, but we focus on how to achieve high performance and fidelity when CCP is in a different address space, including the important case when the datapath is kernel TCP and CCP is in user space.
 
-When CCP is in a different address space, providing per-ACK notifications from the datapath to CCP incurs high overhead, as shown in Figure~\ref{fig:perf:interval}. This experiment shows that for a saturating iperf connection over a loopback interface, the Linux kernel TCP on this machine  (with 4 2.8 Ghz cores) achieves $45$ Gbit/s running Reno, whereas per-ACK reporting from the kernel datapath to CCP running Reno achieves only 68\% of the throughput of the kernel. 
+When CCP is in a different address space, providing per-ACK notifications from the datapath to CCP incurs high overhead, as shown in Table~\ref{fig:perf:interval}. This experiment shows that for a saturating iperf connection over a loopback interface, the Linux kernel TCP on this machine  (with 4 2.8 Ghz cores) achieves $45$ Gbit/s running Reno, whereas per-ACK reporting from the kernel datapath to CCP running Reno achieves only 68\% of the throughput of the kernel. 
 One way to improve performance is to increase the time between reports sent to CCP. The ``Per 10 ms'' bar shows that a less frequent reporting period achieves close to the kernel's throughput. 
 %\ma{are we going to add more reporting periods (other than 10 ms) to the figure?}
 

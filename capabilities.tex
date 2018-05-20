@@ -25,7 +25,7 @@ algorithms have been strictly tied to the ACK clock.
 As a result, as data rates rise, algorithms have less time to make decisions,
 which naturally restricts the computation an algorithm can perform.
 By contrast, CCP algorithms are decoupled from the ACK clock.
-Although congestion signals must still be acquired and summarized at ever-faster rates, CCP algorithms can to amortize computation across different time scales, and use sophisticated data structures and computations that may be unwise on datapaths like the kernel.
+Although congestion signals must still be acquired and summarized at ever-faster rates, CCP algorithms can amortize computation across different time scales, and use sophisticated data structures and computations that may be unwise on datapaths like the kernel.
 
 One such algorithmic technique we propose~\cite{nimbus}, uses CCP to compute Fourier transforms on estimates of cross traffic and infer whether it is elastic (buffer-filling) or not.
 A key component of this technique involves sending traffic in an asymmetric sinusoidal pulse pattern and using the sending and receiving rates measured over an RTT to produce a time-series of cross-traffic rates. The method then computes the FFT of this series and infers elasticity if the FFT at particular frequencies is large.
