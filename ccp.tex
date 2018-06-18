@@ -178,7 +178,7 @@ resettable timer \texttt{Timer.micros}.
 Upon the transition, the handler sets the \texttt{Rate} and advances \texttt{pulseState}.
 After the last phase of the pulse, the handler would reset the timer and \ct{pulseState} to restart the sending pattern (not shown).
 
-Figure~\ref{fig:ccp:bbr} shows\footnote{We only implement BBR's bandwidth and RTT probing (PROBE\_BW and PROBE\_RTT) phases. Our implementation is here: \an{link to CCP BBR implementation}.}
+Figure~\ref{fig:ccp:bbr} shows\footnote{We only implement BBR's bandwidth and RTT probing (PROBE\_BW and PROBE\_RTT) phases. Our implementation is here: \url{github.com/ccp-project/bbr}.}
 the impact of BBR's bandwidth probing on the
 achieved goodput and queueing delays when a single flow runs over a 96 Mbit/s
 bottleneck link with a 100 ms round trip propagation delay.

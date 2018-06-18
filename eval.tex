@@ -6,7 +6,7 @@
     \caption{Cubic in CCP matches Cubic in Linux TCP.}\label{fig:eval:fidelity:time}
 \end{figure}
 
-We implement a user-space CCP in Rust, called Portus\footnote{\an{link to public portus repo}}, which implements functionality common across independent congestion control algorithm implementations, including a compiler for the datapath language and a serialization library for IPC communication.
+We implement a user-space CCP in Rust, called Portus\footnote{github.com/ccp-project/portus}, which implements functionality common across independent congestion control algorithm implementations, including a compiler for the datapath language and a serialization library for IPC communication.
 We also provide a module for common congestion control calculations such as slow start and congestion avoidance.
 CCP congestion control algorithms are hence implemented in Rust; we additionally expose bindings in Python and plan to expose bindings in other languages as well.
 
