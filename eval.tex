@@ -158,6 +158,8 @@ CCP naturally has nonzero overhead since more context switches must occur to mak
 We test two scenarios as the number of flows in the system increases exponentially from $1$ to $1024$.
 In both scenarios, we test CCP's implementation of Reno against the Linux kernel's. We measure average throughput and CPU utilization in $1$ second intervals over the course of $10$ $15$-second experiments using iperf~\cite{iperf}. We use a reporting interval of $10$ ms.
 
+We omit mTCP and QUIC from these scalability experiments and focus on the kernel datapath. The QUIC toy server is mainly used for integration testing and does not perform well as the number of flows increase; we confirmed this behavior with Google's QUIC team. After discussion with the mTCP authors, we were unable to run mTCP at sufficient enough speeds so it could fully utilize a localhost or 10 Gbit/sec connection.
+
 \paragrapha{Localhost microbenchmark} We measure achieved throughput on a loopback interface as the number of flows increases. As the CPU becomes fully utilized, the achieved throughput will plateau. Indeed, in Figure~\ref{fig:eval:perf:numflows}, CCP matches the kernel's throughput up to the maximum number of flows tested, 1024. 
 
 \paragrapha{CPU Utilization} To demonstrate the overhead of CCP in a realistic scenario, we scale the number of flows over a single $10$ Gbit/s link between two physical servers and measure the resulting CPU utilization.
