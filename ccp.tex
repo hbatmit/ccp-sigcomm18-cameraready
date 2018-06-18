@@ -262,9 +262,7 @@ fn create(...) {
   (when true (:= Cwnd (+ Cwnd Ack.bytes_acked)))
   (when (> Ack.lost_pkts_sample 0) (report))");
 }
-fn onReport(...) {
-  // exit slow start
-}
+fn onReport(...) { /* exit slow start */ }
 \end{minted}
 }
 \caption{A within-fold implementation of slow start. Note that CCP algorithm code is not invoked at all until the connection experiences its first loss.} \label{lst:ccp:ssfold}
