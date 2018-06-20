@@ -22,7 +22,8 @@ An operating system's TCP software is but one example of a {\em datapath}, the t
 \centering
     \includegraphics[width=\columnwidth]{img/cc-timeline-nocongsig}
     \vspace{-1cm}
-    \caption{As link characteristics diversify, developers have developed a battery of congestion control algorithms, from the ``long-fat pipe'' schemes of the mid-2000s~\cite{westwood, veno, htcp, hybla} to purely delay-based~\cite{vegas, fasttcp, ledbat, nv, timely} and hybrid loss-delay~\cite{illinois, compound} schemes, and more recent proposals~\cite{pcc, remy, sprout, bbr, copa, abc}.}\label{fig:cctimeline}
+    \caption{Congestion control algorithms over the years.}
+    %\caption{As link characteristics diversify, developers have developed a battery of congestion control algorithms, from the ``long-fat pipe'' schemes of the mid-2000s~\cite{westwood, veno, htcp, hybla} to purely delay-based~\cite{vegas, fasttcp, ledbat, nv, timely} and hybrid loss-delay~\cite{illinois, compound} schemes, and more recent proposals~\cite{pcc, remy, sprout, bbr, copa, abc}.}\label{fig:cctimeline}
 \end{figure}
 
 New datapaths typically do not offer much in terms of congestion control because implementing these algorithms correctly takes considerable time and effort. For instance, the set of available algorithms in mTCP~\cite{mtcp}, a TCP implementation on DPDK, is limited to a variant of Reno. 
@@ -44,38 +45,35 @@ We use the term {\em Congestion Control Plane (CCP)} to refer to this off-datapa
 
     \item {\bf New capabilities:} CCP makes it easier to provide new
       capabilities, such as aggregate control of multiple flows as previously
-      proposed in the congestion manager~\cite{cm}, algorithms that require significant computation (e.g., signal processing, machine learning, \etc) that are hard to write incwhen tied to the ``ACK clock''.
-    All the benefits of a \userspace
-      programming environment (libraries, debuggers, \etc) will be available to
-      developers.
+      proposed in the congestion manager~\cite{cm}, algorithms that require significant computation (e.g., signal processing, machine learning, \etc) using \userspace programming environments. These algorithms are hard to write as window updates on incoming ACKs.
+      %All the benefits of a \userspace programming environment (libraries, debuggers, \etc) will be available to       developers.
 \end{enumerate}
 
 \vspace{0.1in}
 In summary, this paper contributes:
 
 \begin{itemize}
-\item A high-level event-driven language to specify congestion control
+\item An event-driven language to specify congestion control
   algorithms. Algorithm developers specify congestion control behavior using
   combinations of events and conditions, such as the receipt of an
-  acknowledgment or a loss event, along with corresponding handlers to perform
-  simple computations directly in the datapath (\eg increment a window) or defer
-  complex logic to a userspace component.
+  ACK or a loss event, along with corresponding handlers to perform
+  simple computations directly in the datapath (\eg increment the window) or defer
+  complex logic to a \userspace component.
 
 \item A specification of datapath responsibilities. These include congestion
   signals that a datapath should maintain (Table~\ref{tab:api}), as
   well as a simple framework to execute directives from a CCP program. This
   design enables ``write-once, run-anywhere'' protocols.
 
-\item A preliminary demonstration of new capabilities enabled by CCP, including
-  sophisticated new congestion control algorithms and the implementation of an
+\item A demonstration of new capabilities enabled by CCP, including
+   new congestion control algorithms and the implementation of an
   aggregate congestion controller acting on behalf of multiple flows.
 
 \item An evaluation of the fidelity of CCP relative to in-kernel
   implementations under a variety of link conditions. Our CCP implementation
   matches the performance of Linux kernel implementations at only a small
   overhead (5\% more CPU utilization in the worst case).
-  Furthermore, we show it
-  is feasible to implement infrequent congestion control even in low-RTT, high
-  bandwidth environments.
+%  Furthermore, we show it  is feasible to implement infrequent congestion control even in low-RTT, high
+  % bandwidth environments.
 
 \end{itemize}

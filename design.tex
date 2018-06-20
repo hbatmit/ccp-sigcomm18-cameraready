@@ -107,7 +107,7 @@ the networking stack.
 
 The CCP architecture allows users to express and invoke congestion control logic at a timescale naturally suited to the network (\eg every RTT) and to the algorithmic computation (\eg linear optimization).
 %
-Algorithms operate over summaries of network observations obtained over multiple ACKs received by the datapath sender.
+Algorithms operate on summaries of network observations obtained over multiple ACKs received by the datapath sender.
 %
 Users program the datapath component in a safe domain-specific language (\S\ref{sec:exercising-control-over-datapath}) to flexibly summarize these observations for the algorithm.
 
@@ -123,32 +123,30 @@ Such decoupling of algorithm logic from the ACK clock provides two benefits.
 
 First, users can develop congestion control algorithms free from the strict
 time restrictions rooted in the inter-arrival time of packet acknowledgments---a useful feature, especially at high link rates.
-Hence, it becomes possible to build algorithms that perform complex computations and yet retain high throughput.
+Hence, it becomes possible to build algorithms that perform complex computations and yet achieve high throughput.
 
-Second, providing per-ACK notifications from the datapath to the CCP agent would incur
-significant overhead.
+Second, the ability to provide congestion feedback less frequently than per-ACK can significantly improve algorithm performance.
+% Second, providing per-ACK notifications from the datapath to the CCP agent would incur significant overhead.
 %
 Table~\ref{tab:perf:interval} shows that for a single saturating \ct{iperf}
 connection over a loopback interface, Linux kernel TCP on a server machine
 with four 2.8-Ghz cores achieves $45$ Gbit/s running Reno.
 %
-In comparison, per-ACK reporting from the kernel to the CCP \userspace achieves
+In comparison, per-ACK reporting from the kernel to the CCP agent achieves
 only 68\% of the kernel's throughput.
 %
 By increasing the time between reports sent to the slow path to 10 ms (see the
 ``per 10 ms'' row), CCP Reno achieves close to the kernel's throughput.
 
-Given that CCP should report measurements only infrequently, a key question is
-how best to summarize congestion signals within the fast path, so that CCP
-algorithms can achieve high fidelity compared to a baseline that implements the
-algorithm completely within the kernel.
+Given that CCP algorithms operate over measurements supplied only infrequently, a key question is
+how best to summarize congestion signals within the datapath, so that algorithms can achieve high fidelity compared to a baseline that implements the
+algorithm completely within the datapath.
 Although we are optimistic that a good design can achieve high fidelity because the natural time-scale for end-to-end
 congestion control is the RTT between sender and receiver,
 achieving it requires a careful design of the datapath component and the information channel between the datapath and the CCP agent.
 In \S\ref{sec:eval:fidelity}, we show that using a
 larger reporting period does not affect the fidelity of CCP algorithm
 implementations relative to native in-kernel implementations.
-
 
 \subsection{Exercising Control over Datapath Functions}
 \label{sec:exercising-control-over-datapath}
