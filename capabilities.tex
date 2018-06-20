@@ -41,7 +41,7 @@ Copa~\cite{copa} is a recently proposed model-based congestion control algorithm
 Under three network models, this is shown to provide quantifiably low delay, and fair and efficient allocation of bandwidth.
 It is robust to non-congestive loss, buffer-bloat, and unequal propagation delays. It includes mechanisms to provide TCP competitiveness, accurate minimum RTT estimation, and imperfect pacing.
 
-The authors of Copa used CCP to implement Copa recently, and in the process discovered a small bug that produced an erroneous minimum RTT estimate due to ACK compression. They solved this problem with a small modification to the Copa fast path,
+The authors of Copa used CCP to implement Copa recently, and in the process discovered a small bug that produced an erroneous minimum RTT estimate due to ACK compression. They solved this problem with a small modification to the Copa datapath program,
 and in a few hours were able to improve the performance of their earlier user-space implementation. The improvement is summarized here:\\
 
     \begin{tabular}{c|c|c}
