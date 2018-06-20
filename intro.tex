@@ -1,6 +1,6 @@
 \section{Introduction}
 
-Due to the continual deployment of new applications and network technologies, and changes in workload patterns, research on congestion control has not only remained vibrant since the 1980s, but has flourished in recent years. Figure~\ref{fig:cctimeline} shows a time-line of innovations in this area.
+Research on congestion control has not only remained vibrant since the 1980s, but has flourished in recent years because new applications, network technologies, and workload patterns have been emerging at a rapid rate. Figure~\ref{fig:cctimeline} shows a time-line of innovations in this area.
 
 \begin{figure}[t]
 \centering
@@ -29,31 +29,22 @@ New datapaths typically do not offer much in terms of congestion control because
 Lest one dismiss this example as a case of a research project lacking in engineering resources, we note that QUIC, despite Google's imposing engineering resources, does not have most of the algorithms that have been implemented in the Linux kernel over many years.  
 We expect this situation to worsen with the emergence of new hardware accelerators and programmable network interface cards (NICs) because high-speed hardware designers tend to forego programming convenience for performance. The difficulty isn't the volume of code, but the many subtle correctness and performance issues in various algorithms that require expertise to understand and resolve.
 
-This paper starts from the observation, made in a recent position paper~\cite{ccp-hotnets}, that congestion control algorithms do not need to be implemented in the datapath. If the datapath encapsulated the information available to it about {\em congestion signals} like the round-trip time (RTT), packets received and lost, explicit congestion notification (ECN) markings, etc., and periodically provided this information via a well-defined interface to an off-datapath module, then congestion control algorithms could run in the context of that module. Then, by exposing an analogous interface to control transmission parameters such as the window size, pacing rate, and transmission pattern, the datapath could transmit data according to the policies of the off-datapath congestion control algorithm. 
-Of course, the datapath (\eg Linux kernel TCP stack) must be modified to expose
-such an interface, but such an effort only needs to be undertaken once for each
-datapath, and does not grow with the number of congestion control algorithms.
+This paper starts from the observation that congestion control algorithms need not be implemented in the datapath. If the datapath encapsulated the information available to it about {\em congestion signals} like the round-trip time (RTT), packets received and lost, explicit congestion notification (ECN) markings, etc., and periodically provided this information to an off-datapath module, then congestion control algorithms could run in the context of that module. By exposing an analogous interface to control transmission parameters such as the window size, pacing rate, and transmission pattern, the datapath could transmit data according to the policies specified by the off-datapath congestion control algorithm. Of course, the datapath (\eg Linux kernel TCP stack) must be modified to expose
+such an interface, but such an effort needs to be undertaken only once for each datapath, and does not grow with the number of congestion control algorithms.
 
 We use the term {\em Congestion Control Plane (CCP)} to refer to this off-datapath module. Running congestion control in the CCP offers the following benefits:
 \begin{enumerate}
     \item {\bf Write-once, run-anywhere:} With CCP, one can write a congestion control algorithm once and run it on any datapath that supports the specified interface. 
-    We demonstrate in this paper a variety of algorithms running on three datapaths: the Linux kernel, mTCP/DPDK, and QUIC, and show algorithms running for the first time on certain datapaths (e.g., Cubic on mTCP/DPDK, Copa on QUIC).
-    \item {\bf Higher ``velocity'' of development:} With the right abstractions,
+    We describe several algorithms running on three datapaths: the Linux kernel, mTCP/DPDK, and QUIC, and show algorithms running for the first time on certain datapaths (e.g., Cubic on mTCP/DPDK, Copa on QUIC).
+    \item {\bf Higher ``velocity of development'':} With the right abstractions,
       a congestion control designer can focus on the algorithmic essentials
       without worrying about the details and data structures of the
-      datapath. 
-    The result is more expressive, easier to maintain code. We
-      enable a deployment mode where CCP and the algorithm run at user level,
-      implemented in Rust or using CCP's Python bindings. 
-    If the kernel module implementing CCP support is upstreamed, any new algorithms
-      (including untrusted ones) can be deployed into high performance
-      production systems over Linux without involving the upstreaming process.
+      datapath. The resulting code is easier to read and maintain. In our implementation, congestion control algorithms in CCP are written in Rust or Python and run in user-space. 
+      %If the Linux kernel module implementing CCP support is upstreamed, then any new algorithms can be deployed into production systems without further upstreaming requirements. 
 
     \item {\bf New capabilities:} CCP makes it easier to provide new
       capabilities, such as aggregate control of multiple flows as previously
-      proposed in the congestion manager~\cite{cm}, and freedom from the ``ACK
-      Clock'' for algorithms that require significant computation (e.g., signal
-      processing, machine learning, \etc). 
+      proposed in the congestion manager~\cite{cm}, algorithms that require significant computation (e.g., signal processing, machine learning, \etc) that are hard to write when tied to the ``ACK clock''.
     All the benefits of a \userspace
       programming environment (libraries, debuggers, \etc) will be available to
       developers.
