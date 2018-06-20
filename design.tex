@@ -1,4 +1,4 @@
-\section{Design Overview}
+\section{CCP Design Principles}
 \label{s:design}
 %
 \begin{figure}[t]
@@ -9,36 +9,57 @@
     and fold functions to define how to summarize datapath messages into reports processed in CCP.}\label{fig:design}
 \end{figure}
 %
-Our design restructures congestion control by separating it into two distinct components: an off-datapath agent (CCP) and a set of interfaces that the datapath must provide. The CCP agent provides the execution environment for user-specified congestion control algorithms. It receives data about congestion signals from the datapath and invokes the algorithm's code that uses this data. The datapath is responsible for processing feedback (e.g., TCP or QUIC ACKs) from the receiver to provide congestion signals for the algorithms that run in CCP. The datapath also provides interfaces for CCP algorithms to set the congestion window and pacing rate, and express control patterns; these patterns can control transmission times and specify the times at which congestion signals are delivered to CCP.
 
-\subsection{CCP Design Principles}
-\label{s:datapath:isolation}
-
-To enable rich new congestion control algorithms on the Linux networking stack,
+To enable rich new congestion control algorithms on datapaths,
 CCP must provide a low-barrier programming environment and access
 to libraries (\eg for optimization, machine learning, \etc).
 %
 Further, new algorithms should also achieve high performance running at tens of
-Gbit/s per connection with small ``in-stack'' packet delays.
+Gbit/s per connection with small packet delays in the datapath.
 
-However, supporting experimentation and libraries (typically
-\userspace code) means that congestion control algorithm code is untrusted.
-Otherwise, bugs in algorithm or library code could cause kernel
-crashes or create vulnerabilities that could trigger privilege escalation
-attacks on the kernel.
+\subsection{CCP-Datapath Isolation}
+\label{s:datapath:isolation}
+Should congestion control algorithms run in the same address space as the
+datapath? There are conflicting factors to consider:
 
-\Para{Explicit fast and slow path separation.} While algorithms must have
-some component running in the same address space as the kernel to collect measurements,
-we restrict this functionality by requiring {\em explicit fast and slow path} components for algorithms:
-the fast path runs in the Linux kernel, and the slow path in \userspace.
+\Para{Safety.} Supporting experimentation with algorithms and the possibility of
+including \userspace library code means that programs implementing congestion
+control algorithms should be considered untrusted. If algorithms and the
+datapath are in the same address space, bugs in algorithm or library code could
+cause datapath crashes or create vulnerabilities leading to privilege
+escalations in the kernel datapath.
+
+\Para{Performance.} Congestion control algorithms can access the datapath's
+congestion measurements with low delays and high throughput if the two reside in
+the same address space.
+
+\Para{Flexibility.} We anticipate future use-cases of the CCP architecture where
+a congestion control algorithm may run on a machine different from the sender,
+enabling control policies across groups of hosts.
+
+Our design restructures congestion control algorithms into two components in
+separate address spaces: an off-datapath {\em CCP agent} and a component that
+executes in the datapath itself.
 %
-An alternative, which is to allow fully functional kernel modules with software
-fault isolation (\eg LXFI~\cite{lxfi}) from the rest of the kernel, will likely
-involve significant performance impediments.\footnote{Further, an approach such as
-LXFI also requires a careful annotation of kernel functions, and the
-specification of principals and kernel API integrity rules---a challenging
-task because the network stack has a large number of functions with subtle
-behaviors.}
+The CCP agent provides a flexible execution environment for user-specified
+congestion control algorithms, by receiving congestion signals from the datapath
+and invoking the algorithm code on these signals.
+%
+The datapath component is responsible for processing feedback (\eg TCP or QUIC
+ACKs, packet delays, \etc) from the network and the receiver, and provides
+restricted aggregations over congestion signals for the algorithms running in
+the CCP agent.
+%
+Further, the datapath component provides interfaces for the CCP agent to set
+congestion windows and pacing rates.
+
+An alternative design in the case of the kernel datapath, which is to allow
+fully functional kernel modules with software fault isolation (\eg
+LXFI~\cite{lxfi}) from the rest of the kernel, will likely involve significant
+performance impediments.\footnote{Further, an approach such as LXFI also
+  requires a careful annotation of kernel functions, and the specification of
+  principals and kernel API integrity rules---a challenging task because the
+  network stack has a large number of functions with subtle behaviors.}
 %
 Instead, our fast path programs are written in a restrictive domain-specific language (\Sec{sec:ccp})
 that is free from broad classes of vulnerabilities.\footnote{Note that while \texttt{libccp}, our fast path library (\Sec{s:datapath:libccp}), enforces runtime safety of fast-path algorithm logic,
@@ -47,11 +68,14 @@ As any application can open UDP sockets and congest the network, we do not restr
 Meanwhile, slow path programs have full access to the \userspace programming environment,
 tools, and libraries.
 
-Explicit fast and slow path separation also enables future use cases where the
-slow paths of algorithms may run on a machine different from the sender to
-centralize congestion control policies across groups of hosts.
+%% Explicit CCP and datapath separation also enables future use cases where
+%% congestion control algorithms may run on a machine different from the sender to
+%% centralize congestion control policies across groups of hosts.
 
-\an{introduce terminology: fold function, control pattern, etc}
+%% rephrase the stuff below
+Our design supports both modes, but we focus on how to achieve high performance
+and fidelity when CCP is in a different address space, including the important
+case when the datapath is kernel TCP and CCP is in user space.
 
 \begin{table}[]
     \centering
@@ -71,7 +95,9 @@ centralize congestion control policies across groups of hosts.
       \S\ref{sec:eval:whyfold}.}\label{tab:perf:interval}
 \end{table}
 
-\Para{Decoupling algorithm logic from the ACK clock.} Typical congestion control
+\subsection{Decoupling congestion control from the ACK clock}
+
+Typical congestion control
 implementations in the Linux kernel are coupled to the so-called ``ACK-clock,''
 \ie algorithm functionality is invoked upon receiving a packet acknowledgment in
 the networking stack.
@@ -113,51 +139,66 @@ Indeed, in \S\ref{sec:eval:fidelity} we show that using a
 larger reporting period does not affect the fidelity of CCP algorithm
 implementations relative to native in-kernel implementations.
 
-\subsection{Alternate Designs}
+
+\subsection{Exercising Control over Datapath Functions}
+\ngs{content below requires some deduplication with section that follows}
+
+% CCP algorithms specify datapath behavior using two mechanisms: {\em fold functions} and {\em control patterns},  whose directives are used by the datapath to summarize congestion signals sent to CCP, and {\em send patterns}, which control packet transmissions on the datapath. 
+ 
+Congestion-control algorithms written in CCP are not tied to the traditional ``ACK clock'', but rather operate on summaries that encapsulate observations over multiple ACKs received by the datapath sender.
+CCP algorithms specify datapath behavior using two mechanisms: {\em fold functions} and {\em control patterns}, whose directives are interpreted by the datapath to summarize congestion signals sent to CCP and control packet transmissions on the datapath, respectively. 
+ 
+\paragrapha{Congestion signals and fold functions} All CCP-compatible datapaths should export a well-defined set of congestion signals (Table~\ref{tab:datapath:signals}). There are two kinds of congestion signals: \texttt{Ack} signals, which are computed directly on each ACK (e.g., bytes acked in order, bytes acked out of order, RTT sample, etc.) and \texttt{Flow} signals, which are statistics maintained for the flow (e.g., outgoing and incoming rates). Most of these signals are updated on the arrival of an ACK; the exceptions are: \texttt{was\_timeout} and \texttt{lost\_pkts\_sample} updated on a timeout; and \texttt{bytes\_in\_flight} and \texttt{packets\_in\_flight} updated on packet transmissions.
+ 
+% update others might update on a timeout or at other times. \ma{this is
+% vague. what `other times'?}
+
+CCP may read but not write these signals. The only way to gain access to them is via a fold function, which specifies how the datapath should summarize the congestion signals in a single reporting period. 
+%For example, a CCP algorithm may ask to receive the sum of the bytes acknowledged in order, the moving average of the RTT samples, and the latest value of the flow's outgoing rate in a reporting period. 
+ 
+%CCP is unaware of how a datapath computes these signals; for example, it does not know which variables the datapath uses to compute the signals. A CCP algorithm, however, specifies how it wants the datapath to summarize each signal over a reporting period using a small language. 
+ 
+%
+
+Fold functions express simple operations over the congestion signal primitives. Table~\ref{tab:datapath:operators} contains the operations each datapath should be able to compute. A CCP algorithm expresses fold functions in a small, restrictive domain-specific language. Each datapath must support this language. For software datapaths, we have developed \texttt{libccp}, a library that provides a reference implementation of fold function computations in this language and other features common to all datapaths (see \S\ref{s:datapath:libccp}). 
+ 
+The fold function defines a structure called \texttt{Summary}. This structure is maintained by the datapath and encapsulates all measurements reported to CCP by the datapath. The CCP algorithm specifies the fields of the \texttt{Summary} structure in the fold function and how to compute each field from congestion signals. The algorithm may define as many fields as it wants in the \texttt{Summary} structure. The datapath writes the values of these fields using the logic supplied by the CCP algorithm.
+ 
+The following fold function shows an example of how to request the number of bytes delivered in order within the reporting period. The sender's datapath runs this function on each received ACK, \texttt{A}:
+ 
+\begin{minted}{lisp}
+  (def (Summary.acked 0))
+  (:= Summary.acked
+    (+ Summary.acked A.bytes_acked))
+\end{minted}
+ 
+%The fold function defines a \texttt{Summary} signal, which is the third type of signal maintained by the datapath. 
+%Unlike \texttt{Ack} and \texttt{Flow} signals, which are read-only, \texttt{Summary} signals are writeable by the CCP algorithm. 
+ 
+In the example above, the fold function defines a field, \texttt{Summary.acked}, and specifies that on each invocation (typically every received ACK), it should be incremented by the number of in-order bytes observed since the last invocation. After delivering the summary, the datapath resets each reported \texttt{Summary} field to the specified initial value.
+ 
+%We specify the complete list of available signals and built-in operations on them in \S\ref{s:datapath:fold}.
+ 
+\paragrapha{Control patterns} CCP algorithms can specify the congestion window or pacing rate using simple functions supported by the datapath. These can be set to either absolute values or relative to current values. The algorithms can also specify timing patterns according to which summary reports from fold functions and window/rate settings are executed by the datapath. 
+The ability to specify timing patterns is useful for two reasons. First, algorithms may wish to specify patterns of sending; BBR~\cite{bbr}, for example, sends pulses of different magnitudes for specific time durations. Second, algorithms may wish to specify the precise intervals over which congestion signals should be gathered and reported (e.g., once every half-RTT).
+ 
+\begin{minted}{rust}
+SetCwndAbs(...) => WaitRtts(0.5) => Report()
+\end{minted}
+ 
+Control patterns use \texttt{=>} to specify that the directive on the right should happen after the one on the left. This example pattern uses the \texttt{WaitRtts()} directive to specify that the datapath should set the congestion window to the specified value, wait for a half-RTT, and then report a summary to CCP. After this report, the pattern will reset Summary state and loop back to \texttt{SetCwndAbs()}.
+ 
+%We study this behavior with several experiments in \S\ref{s:eval:fidelity}.
+ 
+Figure~\ref{fig:design} shows the architecture of a CCP-enabled sender, highlighting how the components we have discussed in this section fit together. 
+
+
+
+\subsection{Alternative Designs}
 \label{sec:design:alternatives}
 
 \an{eBPF is limited and pluggable tcp is strictly less general than us.}
 
 \an{address congestion manager here}
 
-\subsection{CCP-Datapath Isolation}
 
-Should CCP run in the same address space as the datapath or not? There are some trade-offs involved in this decision. On the plus side, if run in the same address space, then information could be exchanged between them nearly instantaneously at high bandwidth, and a congestion signal could be sent from the datapath to CCP every time feedback from the receiver arrives. But there are two drawbacks to this approach:
-
-\paragrapha{Safety} Bugs in CCP or in the algorithm's code could cause datapath crashes, or cause vulnerabilities that trigger privilege escalation attacks on kernel datapaths. 
-To cope, at a minimum, we would have to enforce restrictions on the kernel functions that CCP can use, and adopt methods from recent research on kernel software fault isolation (LXFI~\cite{lxfi}). 
-This approach will have a non-trivial performance impact, quite likely defeating the purpose of running CCP in the same address space as the datapath. 
-This approach also requires a careful annotation of kernel functions, and the specification of principals and kernel API integrity rules, a challenging task because the network stack has a large number of functions with subtle behaviors.
-    
-\paragrapha{Flexibility} In the future, we anticipate running CCP on a different machine from the sender to centralize congestion control policies across groups of hosts. 
-The same-address-space CCP would require a substantial re-design for this mode of operation.
-
-\begin{table}[]
-    \centering
-    \begin{tabular}{c|c|c}
-        Implementation & Reporting Interval & Mean Throughput \\
-        \hline
-        Kernel & - & $43$ Gbit/s \\
-        CCP & Per ACK & $29$ Gbit/s \\
-        CCP & Per $10$ ms & $41$ Gbit/s \\
-    \end{tabular}
-    \caption{Single-flow throughput for different reporting intervals between the Linux TCP datapath and user-space CCP, compared to kernel TCP throughput. Per-ACK feedback (0 $\mu$s interval) reduces throughput by 32\%, a significant amount, while using a $10$ ms reporting interval achieves almost identical throughput to the kernel. Results as the number of flows  increases are in \S\ref{sec:eval:whyfold}.}\label{fig:perf:interval}
-\end{table}
-
-\smallskip
-
-Our design supports both modes, but we focus on how to achieve high performance and fidelity when CCP is in a different address space, including the important case when the datapath is kernel TCP and CCP is in user space.
-
-When CCP is in a different address space, providing per-ACK notifications from the datapath to CCP incurs high overhead, as shown in Table~\ref{fig:perf:interval}. This experiment shows that for a saturating iperf connection over a loopback interface, the Linux kernel TCP on this machine  (with 4 2.8 Ghz cores) achieves $45$ Gbit/s running Reno, whereas per-ACK reporting from the kernel datapath to CCP running Reno achieves only 68\% of the throughput of the kernel. 
-One way to improve performance is to increase the time between reports sent to CCP. The ``Per 10 ms'' bar shows that a less frequent reporting period achieves close to the kernel's throughput. 
-%\ma{are we going to add more reporting periods (other than 10 ms) to the figure?}
-
-\if 0
-One could combat this issue by moving CCP closer to the datapath; \ie either by placing them in the same address space or perhaps by using more efficient IPC mechanisms. Indeed, the design of CCP allows for such solutions. 
-
-\fi
-
-Given that CCP should report measurements only infrequently, a key question is how best to {\em summarize} congestion signals on the datapath so that CCP algorithms can achieve high fidelity compared to a baseline that implements the algorithm within the datapath. 
-Although we are optimistic that a good design can achieve high fidelity because the natural time-scale for end-to-end congestion control is the RTT between sender and receiver, achieving it requires a careful design of the information channel between datapath and CCP. 
-
-In \S\ref{sec:eval:fidelity} we show that using a larger reporting period does not affect the fidelity of CCP algorithm implementations relative to native datapath ones. 
