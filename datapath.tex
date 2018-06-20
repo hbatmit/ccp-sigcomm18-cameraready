@@ -1,14 +1,22 @@
 \section{CCP Implementation}
 \label{s:datapath}
 %
-\subsection{Datapath implementation requirements}
+\subsection{Datapath requirements}
 \label{sec:implementation-basics}
-
+% this text was in the sigcomm submission, I think it makes things flow better. (dr)
+A CCP-compatible datapath must accurately enforce the congestion
+control algorithm specified by the user-space CCP module.
+From the datapath’s perspective, it is
+almost as if the developer were writing their algorithm directly
+into the datapath, while algorithms themselves are free from considering datapath-specific implementation issues.
+Furthermore, once a datapath implements
+support for CCP, it automatically enables all CCP algorithms.
 An implementation of the CCP datapath must perform the following functions:
 \begin{itemize}
 \item The datapath should communicate with a \userspace CCP agent using an IPC
   mechanism. The datapath multiplexes \ct{report}s from multiple connections
-  onto the single persistent IPC connection to the slow path.
+  onto the single persistent IPC connection to the slow path. It must also perform
+  the proper serialization for all messages received and sent.
 \item The datapath should execute the user-provided domain-specific program on
   the arrival of every acknowledgment or a timeout in a safe manner. Datapath
   programs (\Sec{sec:ccp}) may include simple computations to summarize
@@ -16,12 +24,50 @@ An implementation of the CCP datapath must perform the following functions:
   windows and rates.
 \end{itemize}
 
-For example, we have implemented a CCP support for the Linux kernel datapath in a kernel
-module on Linux 4.14\footnote{github.com/ccp-project/ccp-kernel}. The module
-implements the communication channel to CCP using either Netlink sockets or a custom
-character device, and leverages the pluggable TCP API to invoke the datapath program
-interpreter upon arrivals of packet acknowledgments and timeouts.
-%
+\subsection{Safe execution of datapath programs}
+\label{s:datapath:fold}
+Datapaths are responsible for safely executing the program sent from the user-space CCP module. While CCP will compile the instructions and check for mundane errors (e.g., use of undefined variables) before installation, it is the datapath’s responsibility to ensure safe interpretation of the instructions. For example, datapaths should prevent divide by zero errors when calculating user defined variables and guarantee that programs cannot overwrite the congestion primitives.
+
+Thankfully, this task is straightforward as datapath programs are limited in functionality: 
+programs may not enter loops, perform floating point operations, define functions or data structures, allocate memory, or use pointers. Rather, programs are strictly a way to express arithmetic computations over a limited set of primitives, define when and how to set congestion windows and pacing rates, and report measurements.
+
+\subsection{\ct{libccp}: CCP's datapath component}
+\label{s:datapath:libccp}
+We have implemented a library, \ct{libccp}, that provides a reference
+implementation of CCP's datapath component, in order to simplify CCP datapath development.\footnote{github.com/ccp-project/libccp}
+\ct{libccp} is lightweight execution loop for
+datapath programs and message serialization. 
+While we considered using eBPF~\cite{ebpf} or TCP BPF~\cite{tcpbpf}
+as the execution loop, including our own makes \ct{libccp} portable to datapaths outside the Linux kernel; the execution loop runs the same code in all three datapaths we implemented.
+
+To use \ct{libccp}, the datapath must provide callbacks to functions that: (1) set the window and rate, (2) provide a notion of time, and (3) send an IPC message to CCP. Upon reading a message from CCP, the datapath calls \ct{ccp\_recv\_msg()}, which automatically de-multiplexes the message for the correct flow. After updating congestion signals, the datapath can call \ct{ccp\_invoke()}, which automatically runs the datapath program, which may update variable calculations, set windows or rates,
+and send report summaries to CCP. It is the responsibility of the datapath to ensure that it correctly computes and provides the congestion signals in Table~\ref{tab:api}.
+
+The more signals a datapath can measure, the more algorithms that datapath can support. For example, CCP can only support DCTCP \cite{DCTCP} or ABC \cite{abc} on datapaths that provide ECN support; CCP will not run algorithms on datapaths lacking support for that algorithm’s requisite primitives.
+
+\subsection{Datapath implementation}
+\label{s:datapath:software_datapaths}
+We use \ct{libccp} to implement CCP support in three software datapaths: the Linux kernel\footnote{Our kernel module is built on top of Linux 4.14: github.com/ccp-project/ccp-kernel}, mTCP, a DPDK-based datapath, and Google's QUIC.
+For both the Linux kernel and QUIC datapaths, we leveraged their respective pluggable congestion control interfaces, which provide callbacks upon packet ackowledgements and timeouts, where the ~\ct{libccp} program interpreter can be invoked.
+The kernel module implements the communication channel to CCP using either Netlink sockets or a custom
+character device, while mTCP and QUIC use Unix domain sockets.
+Additional modifications to the QUIC source code were necessary in order to handle all CCP flows through one persistent IPC connection, and to expose the function callbacks specified by the \ct{libccp} API.
+
+Unlike QUIC and the Linux kernel, mTCP only implements Reno and does not explicitly expose a congestion control interface for new algorithms, so we modified the mTCP transport code directly.
+In addition, mTCP does not implement SACK or packet pacing.
+When it observes a loss (defined as a
+triple duplicate ACK), it jumps back and begins retransmitting all packets starting from the lost packet, even if only a
+single packet was lost.
+As a result, when initially testing our implementation of Cubic, each time the buffer was filled, CCP
+would cut the window, but when the cumulative ACK finally advanced, mTCP would immediately burst out a congestion window’s worth of packets (most of which had already been successfully received and SACKed), forcing another drop, and so on.
+In order to achieve behavior consistent with other datapaths, we also implemented SACK and packet pacing.
+
+The definition congestion signal primitives, IPC, and window and rate enforcement mechanisms is the only datapath-specific
+work needed to support CCP.
+As an example, Table ~\ref{tab:api:kernel} details the mapping of kernel variables to CCP primitives.
+Most of these definitions are very simple; the CCP API requires datapaths to solely \textit{expose} variables they are already measuring.
+All other necessary functionality, most notably interpreting and running the datapath programs, is shared amongst software datapaths via the program interpreter: \texttt{libccp} (\S\ref{s:datapath:libccp}).
+
 \begin{table}
     \centering
     \footnotesize
@@ -40,35 +86,9 @@ interpreter upon arrivals of packet acknowledgments and timeouts.
         \texttt{Flow.bytes\_in\_flight}, \texttt{Flow.packets\_in\_flight} & \texttt{tcp\_packets\_in\_flight(tcp\_sock)} \\
     \end{tabular}
     %\vspace{0.075in}
-    \caption{Definition of CCP primitives in terms of the \ct{tcp\_sock} and \ct{rate\_sample} structures.}\label{tab:api:kernel}
+    \caption{Definition of CCP primitives in terms of the \ct{tcp\_sock} and \ct{rate\_sample} structures, for the Linux kernel datapath.}\label{tab:api:kernel}
 \end{table}
 
-Table ~\ref{tab:api:kernel} details the mapping of kernel variables
-to CCP primitives.
 %
-The module enforces congestion windows and sending rates using the corresponding
-members of the \ct{tcp\_sock} and \ct{sock} structures (\ct{snd\_cwnd} and
-\ct{sk\_pacing\_rate}, respectively).
 
-This definition of primitives and enforcement mechanisms is the only datapath-specific
-work needed to support CCP; all other functionality is shared amongst software datapaths
-via the program interpreter: \texttt{libccp} (\S\ref{s:datapath:libccp}). Indeed, we have leveraged \texttt{libccp} to implement support for CCP in mTCP, a DPDK-based datapath, and Google's QUIC.
 
-\subsection{Safe Execution of fast path programs}
-\label{s:datapath:fold}
-Datapaths are responsible for safely executing the program sent from the user-space CCP module. While CCP will compile the instructions and check for mundane errors (e.g., use of undefined variables) before installation, it is the datapath’s responsibility to ensure safe interpretation of the instructions. For example, datapaths should prevent divide by zero errors when calculating user defined variables and guarantee that programs cannot overwrite the congestion primitives.
-
-Thankfully, this task is straightforward as datapath programs are limited in functionality: 
-programs may not enter loops, perform floating point operations, define functions or data structures, allocate memory, or use pointers. Rather, programs are strictly a way to express arithmetic computations over a limited set of primitives, define when and how to set congestion windows and pacing rates, and report measurements.
-
-\subsection{\ct{libccp}: CCP's datapath component}
-\label{s:datapath:libccp}
-We have implemented a library, \ct{libccp}, that provides a reference
-implementation of CCP's datapath component; \ie a lightweight execution loop for
-datapath programs and message serialization. 
-While we considered using eBPF~\cite{ebpf} or TCP BPF~\cite{tcpbpf}
-as the execution loop, including our own makes \ct{libccp} portable; the execution loop runs the same code in all three datapaths we implemented.
-
-To use \ct{libccp}, the datapath must provide callbacks to functions that: (1) set the window and rate, (2) provide a notion of time, and (3) send an IPC message to CCP. Upon reading a message from CCP, the datapath calls \ct{ccp\_recv\_msg()}, which automatically de-multiplexes the message for the correct flow. After updating congestion signals, the datapath can call \ct{ccp\_invoke()}, which automatically runs the datapath program, which may update variable calculations, set windows or rates, and send report summaries to CCP. It is the responsibility of the datapath to ensure that it correctly computes and provides the congestion signals in Table 1.
-
-The more signals a datapath can measure, the more algorithms that datapath can support. For example, CCP can only support DCTCP \cite{DCTCP} or ABC \cite{abc} on datapaths that provide ECN support; CCP will not run algorithms on datapaths lacking support for that algorithm’s requisite primitives.
