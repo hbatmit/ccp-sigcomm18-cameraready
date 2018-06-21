@@ -155,29 +155,38 @@ implementations relative to native in-kernel implementations.
 \label{sec:design:restricted-datapath-functions}
 
 How must the datapath provide congestion feedback to algorithms running in the CCP agent?
-
-Ideally, a datapath should supply congestion signals to algorithms with suitable granularity (\eg averaged over an RTT, rather than per ACK), at configurable time intervals and during critical events (\eg packet losses).
-
-With CCP, users can specify the behavior of the datapath upon receiving any network feedback, including those derived from ACKs (\eg packet delays, delivered bytes, \etc) and timer events (\eg retransmit timeout).
 %
-The datapath component of CCP exposes a number of {\em congestion signals}, over which users can write {\em fold functions} to summarize network observations for algorithms.
-%
-It is also possible to perform control actions, such as reporting summarized measurements to an algorithm, or setting a flow's congestion window or packet pacing rate to control the transmission behavior of the datapath.
+Ideally, a datapath should supply congestion signals to algorithms with suitable granularity (\eg averaged over an RTT, rather than per ACK), at configurable time intervals (\eg a few times every RTT) and during critical events (\eg packet losses).
 
-These datapath directives are written in a highly restricted domain-specific language (\S\ref{sec:ccp}). Hence, unlike the congestion control algorithms, datapath programs are free from broad classes of vulnerabilities.
+With CCP, users can specify the behavior of the datapath upon receiving any network feedback, either derived from ACKs (\eg packet delays) or timer events (\eg retransmit timeout).
 %
-However, algorithms are free to set arbitrary congestion windows or rates, in the same way that any application can open up UDP sockets and congest the network.
+These datapath directives are written in a highly restrictive domain-specific language (\S\ref{sec:ccp}).
 %
-Our datapath program interpreter, {\tt libccp} (\S\ref{s:datapath:libccp}), enforces run-time safety for the programs in this language, and provides a reference  implementation that we have ported to three software datapaths.
+Unlike the algorithms running in the CCP agent, datapath programs are significantly constrained in functionality and are free from broad classes of vulnerabilities;\footnote{Algorithms are still allowed to set arbitrary congestion windows or rates, in the same way that any application can congest the network using UDP sockets.
+}
+%
+we have implemented a program interpreter, {\tt libccp}, which enforces run-time safeguards for datapath programs. We have ported {\tt libccp} to three software datapaths.
 
-A ``split'' programming model for congestion control emerges as a consequence of supporting per-ACK logic in the datapath and ACK-decoupled logic in the CCP agent.
-%
 
+The datapath programming language is event-driven. We describe it in detail in \S\ref{sec:ccp}.
+%
+At a high level, CCP-compatible datapaths expose a number of {\em congestion signals}, over which users can write {\em fold functions} to summarize network observations for algorithms.
+%
+It is also possible to perform control actions such as reporting summarized measurements to an algorithm or setting a flow's packet pacing rate to control the transmission behavior of the datapath.
+%
+Fold functions and control actions can be triggered to execute when certain conditions hold, \eg an ACK is received or a timer elapses.
+
+% Our datapath program interpreter, {\tt libccp} (\S\ref{s:datapath:libccp}), enforces run-time safeguards for datapath programs, and provides a reference implementation of a CCP datapath component. We have ported {\tt libccp} to three software datapaths.
+
+Supporting per-ACK functionality in the datapath (fast path) and ACK-decoupling in the CCP agent (slow path) results in a two-tier programming model:
+%
+users can choose to partition the logic of the algorithm between these two components according to their performance and flexibility requirements (\S\ref{s:ccp:ss}).
 
 % CCP algorithms specify datapath behavior using two mechanisms: {\em fold functions} and {\em control patterns},  whose directives are used by the datapath to summarize congestion signals sent to CCP, and {\em send patterns}, which control packet transmissions on the datapath. 
  
 % CCP algorithms specify datapath behavior using two mechanisms: {\em fold functions} and {\em control patterns}, whose directives are interpreted by the datapath to summarize congestion signals sent to CCP and control packet transmissions on the datapath, respectively. 
- 
+
+\if 0
 \paragrapha{Congestion signals and fold functions} All CCP-compatible datapaths export a well-defined set of congestion signals (Table~\ref{tab:api}). There are two kinds of congestion signals: \texttt{Ack} signals, which are computed directly on each ACK (e.g., bytes acked in order, bytes acked out of order, RTT sample, etc.) and \texttt{Flow} signals, which are statistics maintained for the flow (e.g., outgoing and incoming rates). Most of these signals are updated on the arrival of an ACK; the exceptions are: \texttt{was\_timeout} and \texttt{lost\_pkts\_sample} updated on a timeout; and \texttt{bytes\_in\_flight} and \texttt{packets\_in\_flight} updated on packet transmissions.
  
 % update others might update on a timeout or at other times. \ma{this is
@@ -196,7 +205,7 @@ Fold functions express simple operations over the congestion signal primitives. 
  
 The fold function defines a structure called \texttt{Report}. This structure is maintained by the datapath and encapsulates all measurements reported to a congestion control algorithm by the datapath. The algorithm specifies the fields of the \texttt{Report} structure in the fold function and how to compute each field from congestion signals. The algorithm may define as many fields as it wants in the \texttt{Report} structure. The datapath writes the values of these fields using the logic supplied by the datapath program.
  
-The following fold function shows an example of how to request the number of bytes delivered in order within the reporting period. The sender's datapath runs this function on each received ACK, \texttt{A}:
+The following fold function shows an example of how to request the number of bytes delivered in order within the reporting period. The sender's datapath runs this function on each received ACK:
 
 {\footnotesize
 \begin{minted}{lisp}
@@ -222,10 +231,9 @@ SetCwndAbs(...) => WaitRtts(0.5) => Report()
 Control patterns use \texttt{=>} to specify that the directive on the right should happen after the one on the left. This example pattern uses the \texttt{WaitRtts()} directive to specify that the datapath should set the congestion window to the specified value, wait for a half-RTT, and then report a summary to CCP. After this report, the pattern will reset Summary state and loop back to \texttt{SetCwndAbs()}.
  
 %We study this behavior with several experiments in \S\ref{s:eval:fidelity}.
- 
+\fi
+
 Figure~\ref{fig:design} shows the architecture of a CCP-enabled sender, highlighting how the components we have discussed in this section fit together. 
-
-
 
 \subsection{Alternative Designs}
 \label{sec:design:alternatives}

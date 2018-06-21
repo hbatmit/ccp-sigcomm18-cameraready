@@ -34,7 +34,7 @@ programs may not enter loops, perform floating point operations, define function
 \subsection{\ct{libccp}: CCP's datapath component}
 \label{s:datapath:libccp}
 We have implemented a library, \ct{libccp}, that provides a reference
-implementation of CCP's datapath component, in order to simplify CCP datapath development.\footnote{github.com/ccp-project/libccp}
+implementation of CCP's datapath component, in order to simplify CCP datapath development.\footnote{\url{github.com/ccp-project/libccp}}
 \ct{libccp} is lightweight execution loop for
 datapath programs and message serialization. 
 While we considered using eBPF~\cite{ebpf} or TCP BPF~\cite{tcpbpf}
@@ -48,25 +48,23 @@ The more signals a datapath can measure, the more algorithms that datapath can s
 \subsection{Datapath implementation}
 \label{s:datapath:software_datapaths}
 We use \ct{libccp} to implement CCP support in three software datapaths: the Linux kernel\footnote{Our kernel module is built on top of Linux 4.14: github.com/ccp-project/ccp-kernel}, mTCP, a DPDK-based datapath, and Google's QUIC.
-For both the Linux kernel and QUIC datapaths, we leveraged their respective pluggable congestion control interfaces, which provide callbacks upon packet ackowledgements and timeouts, where the ~\ct{libccp} program interpreter can be invoked.
+For both the Linux kernel and QUIC datapaths, we leveraged their respective pluggable congestion control interfaces, which provide callbacks upon packet acknowledgements and timeouts, where the ~\ct{libccp} program interpreter can be invoked.
 The kernel module implements the communication channel to CCP using either Netlink sockets or a custom
 character device, while mTCP and QUIC use Unix domain sockets.
-Additional modifications to the QUIC source code were necessary in order to handle all CCP flows through one persistent IPC connection, and to expose the function callbacks specified by the \ct{libccp} API.
+We additionally modified the QUIC source code to support multiplexing CCP flows on one persistent IPC connection and to expose the function callbacks required by the \ct{libccp} API.
 
-Unlike QUIC and the Linux kernel, mTCP only implements Reno and does not explicitly expose a congestion control interface for new algorithms, so we modified the mTCP transport code directly.
-In addition, mTCP does not implement SACK or packet pacing.
-When it observes a loss (defined as a
-triple duplicate ACK), it jumps back and begins retransmitting all packets starting from the lost packet, even if only a
-single packet was lost.
+Unlike QUIC and the Linux kernel, mTCP only implements Reno and does not explicitly expose a congestion control interface for new algorithms. 
+In order to achieve behavior consistent with other datapaths, we also implemented SACK and packet pacing; these features were previously lacking.
+
+mTCP's lack of support for SACK caused us problems: when it observes a triple duplicate ACK, 
+it jumps back and retransmits all packets starting from the lost packet (\ie Go-Back-N), even in the case of isolated loss.
 As a result, when initially testing our implementation of Cubic, each time the buffer was filled, CCP
-would cut the window, but when the cumulative ACK finally advanced, mTCP would immediately burst out a congestion window’s worth of packets (most of which had already been successfully received and SACKed), forcing another drop, and so on.
-In order to achieve behavior consistent with other datapaths, we also implemented SACK and packet pacing.
+would cut the window, but when the cumulative ACK finally advanced, mTCP would immediately transmit a congestion window’s worth of packets in a burst (most of which had already been successfully received and SACKed), causing more congestion.
 
-The definition congestion signal primitives, IPC, and window and rate enforcement mechanisms is the only datapath-specific
-work needed to support CCP.
+The definition of congestion signal primitives, IPC, and window and rate enforcement mechanisms is the only datapath-specific work needed to support CCP.
 As an example, Table ~\ref{tab:api:kernel} details the mapping of kernel variables to CCP primitives.
-Most of these definitions are very simple; the CCP API requires datapaths to solely \textit{expose} variables they are already measuring.
-All other necessary functionality, most notably interpreting and running the datapath programs, is shared amongst software datapaths via the program interpreter: \texttt{libccp} (\S\ref{s:datapath:libccp}).
+Most of these definitions are straightforward; the CCP API merely requires datapaths to \textit{expose} variables they are already measuring.
+All other necessary functionality, most notably interpreting and running the datapath programs, is shared amongst software datapaths via \texttt{libccp} (\S\ref{s:datapath:libccp}).
 
 \begin{table}
     \centering
