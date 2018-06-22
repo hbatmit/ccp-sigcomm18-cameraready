@@ -13,34 +13,6 @@
 %\setlength{\abovedisplayskip}{0pt}
 %\setlength{\belowdisplayskip}{-5pt}
 
-% Copyright
-\renewcommand\footnotetextcopyrightpermission[1]{} % removes footnote with conference info
-\setcopyright{none}
-%\setcopyright{acmcopyright}
-%\setcopyright{acmlicensed}
-%\setcopyright{rightsretained}
-%\setcopyright{usgov}
-%\setcopyright{usgovmixed}
-%\setcopyright{cagov}
-%\setcopyright{cagovmixed}
-
-\settopmatter{printacmref=false, printccs=false, printfolios=true}
-
-% DOI
-\acmDOI{}
-
-% ISBN
-\acmISBN{}
-
-%Conference
-%\acmConference[Submitted for review to SIGCOMM]{}
-%\acmYear{2018}
-%\copyrightyear{}
-
-%% {} with no args suppresses printing of the price
-\acmPrice{}
-
-
 \begin{document}
 \title{Restructuring Endpoint Congestion Control}
 \author{
@@ -56,6 +28,36 @@ Hari Balakrishnan
 %\email{{akshayn,frankc,deeptir,prateesh,alephtwo,alizadeh,hari}@csail.mit.edu, radhika@eecs.berkeley.edu}
 \email{nimbus@nms.csail.mit.edu}
 \affiliation{MIT Computer Science and Artificial Intelligence Laboratory}
+%% \begin{CCSXML}
+%%<ccs2012>
+%%<concept>
+%%<concept_id>10003033.10003039.10003048</concept_id>
+%%<concept_desc>Networks~Transport protocols</concept_desc>
+%%<concept_significance>500</concept_significance>
+%%</concept>
+%%<concept>
+%%<concept_id>10003033.10003034.10003038</concept_id>
+%%<concept_desc>Networks~Programming interfaces</concept_desc>
+%%<concept_significance>300</concept_significance>
+%%</concept>
+%%<concept>
+%%<concept_id>10003033.10003039.10003040</concept_id>
+%%<concept_desc>Networks~Network protocol design</concept_desc>
+%%<concept_significance>300</concept_significance>
+%%</concept>
+%%</ccs2012>
+%%\end{CCSXML}
+%%
+%%\ccsdesc[500]{Networks~Transport protocols}
+%%\ccsdesc[300]{Networks~Programming interfaces}
+%%\ccsdesc[300]{Networks~Network protocol design}
+\acmYear{2018}\copyrightyear{2018}
+\setcopyright{acmlicensed}
+\acmConference[SIGCOMM '18]{SIGCOMM '18: SIGCOMM 2018}{August 20--25, 2018}{Budapest, Hungary}
+\acmBooktitle{SIGCOMM '18: SIGCOMM 2018, August 20--25, 2018, Budapest, Hungary}
+\acmPrice{15.00}
+\acmDOI{10.1145/3230543.3230553}
+\acmISBN{978-1-4503-5567-4/18/08}
 
 \include{abstract}
 \maketitle

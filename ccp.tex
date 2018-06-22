@@ -55,6 +55,8 @@ root or use machine learning to determine a sending rate, while
 providing high performance by retaining frequently invoked logic within
 the datapath.
 
+\ma{Again, too much repetition. We just said this in the 'Supporting per-ACK ...' paragraph above.}
+
 \ngs{a figure would be nice to show this flow of info. Or figure 2 must be augmented somehow.}
 Building a congestion control algorithm in CCP involves
 implementing two callback handlers ( \ct{onCreate()} and \ct{onReport()}) in the CCP agent
@@ -76,8 +78,9 @@ The \ct{onReport()} function computes and installs the flow's congestion
 window or sending rate using the signals from the datapath report.
 %
 It may also replace the datapath program entirely with different logic.
-
-\paragrapha{Datapath programs} CCP's datapath programs are written in a restrictive
+\subsection{Datapath program abstractions}
+\label{s:ccp:datapath_programs}
+ CCP's datapath programs are written in a restrictive
 domain-specific language.
 Conceptually, datapath programs contain state initializations, \ie a \ct{def}
 clause, and event specifications, \ie a series of \ct{when} clauses.
@@ -114,7 +117,9 @@ from the packet, the number of bytes that the stack believes have been dropped
 by the network, the delivery rate of packets at the receiver, and so on.
 Table~\ref{tab:api} enumerates the primitive congestion signals we support.
 
-\paragrapha{CCP Algorithm Logic} The \ct{onReport()} handler provides a way to
+\subsection{CCP algorithm logic}
+\label{s:ccp:ccp_algorithm_logic}
+The \ct{onReport()} handler provides a way to
 implement congestion control actions in \userspace in reaction to reports from the datapath.
 For example, a simple additive-increase
 multiplicative-decrease (AIMD) algorithm could be implemented in Python\footnote{Our CCP implementation is in Rust and exposes Python bindings.} using
