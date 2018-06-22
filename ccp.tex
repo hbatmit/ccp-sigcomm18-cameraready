@@ -170,12 +170,10 @@ with high fidelity relative to a per-packet update algorithm, as we show in \S\r
 
 \subsection{Example: BBR}
 \label{s:ccp:bbr}
-As a more involved example, we show below
-how various components of TCP BBR~\cite{bbr} are implemented using the CCP API.
-A BBR sender estimates the rate of packets delivered to the receiver, and sets
-its sending rate to the maximum delivered rate (over a sliding time
-window), which is believed to be the rate of the bottleneck link between the sender
-and the receiver.
+As a more involved example, we show below how various components of TCP BBR~\cite{bbr} are implemented using the CCP API.
+A BBR sender estimates the rate of packets delivered to the receiver, and 
+sets its sending rate to the maximum delivered rate (over a sliding time window), 
+which is believed to be the rate of the bottleneck link between the sender and the receiver.
 
 This filter over the received rate is expressed simply in a fold function:
 {\footnotesize
@@ -217,8 +215,8 @@ Upon the transition, the handler sets the \texttt{Rate} and advances \texttt{pul
 After the last phase of the pulse, the handler would reset the timer and \ct{pulseState} to restart the sending pattern (not shown).
 %\ma{is this too complicated to show? it would be nice to show a complete example.}
 
-Figure~\ref{fig:ccp:bbr} shows\footnote{We only implement BBR's PROBE\_BW and PROBE\_RTT. Our implementation is here: \url{github.com/ccp-project/bbr}.}
-the impact of BBR's bandwidth probing on the
+Figure~\ref{fig:ccp:bbr} shows
+the impact of BBR's bandwidth probing\footnote{We only implement BBR's PROBE\_BW and PROBE\_RTT. Our implementation is here: \url{github.com/ccp-project/bbr}.} on the
 achieved goodput and queueing delays when a single flow runs over a 48 Mbit/s
 bottleneck link with a 20 ms round trip propagation delay.
 %

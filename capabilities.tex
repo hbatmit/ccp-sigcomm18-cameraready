@@ -1,5 +1,6 @@
-\section{Capabilities}
+\section{New Capabilities}
 \label{s:capabilities}
+\ma{I don't think we need to change this. 'New Capabilities' seems fine}
 
 \begin{figure}
     \centering
@@ -13,25 +14,40 @@
     \caption{Comparison of the same CCP implementation of Cubic and Copa run on three different datapaths. Copa is run on a 12 Mbps link for all three datapaths. For Cubic, we use a 48 Mbps link on the QUIC and kernel datapaths. mTCP did not exhibit stable behavior at higher bandwidths, so we ran mTCP at 12 Mbps; this is why the congestion window is lower.}\label{fig:datapaths:wora}
 \end{figure*}
 
-We present four new capabilities enabled by CCP: new classes of congestion control, rapid development and testing of algorithms, congestion control for flow aggregates, and the ability to write an algorithm once and run it on multiple datapaths.
+We present four new capabilities enabled by CCP: congestion control algorithms that leverage user-space programming libraries, rapid development and testing of algorithms, congestion control for flow aggregates, and the ability to write an algorithm once and run it on multiple datapaths.
 
-\subsection{New Algorithms}
+\subsection{Sophisticated Congestion Control Algorithms}
 \label{s:capabilities:algs}
 
-CCP enables a broad new class of congestion control algorithms.
-Until now, because congestion control has been embedded in the datapath,
-algorithms have been strictly tied to the ACK clock.
-As a result, as data rates rise, algorithms have less time to make decisions,
-which naturally restricts the computation an algorithm can perform.
-By contrast, CCP algorithms are decoupled from the ACK clock.
-Although congestion signals must still be acquired and summarized at ever-faster rates, CCP algorithms can amortize computation across different time scales, and use sophisticated data structures and computations that may be unwise on datapaths like the kernel.
+CCP makes it possible to use sophisticated user-space libraries, such as libraries for signal processing, machine learning, etc. to implement congestion control algorithms.
 
-One such algorithmic technique~\cite{nimbus} uses CCP to compute Fourier transforms on estimates of cross traffic and infer whether it is elastic (buffer-filling) or not.
-A key component of this technique involves sending traffic in an asymmetric sinusoidal pulse pattern and using the sending and receiving rates measured over an RTT to produce a time-series of cross-traffic rates. The method then computes the FFT of this series and infers elasticity if the FFT at particular frequencies is large.
+One example is Nimbus~\cite{nimbus}, a new congestion control algorithm that detects whether the cross traffic at a bottleneck link is  elastic (buffer-filling) or not, and uses different control rules depending on the outcome. The Nimbus algorithm involves sending traffic in an asymmetric sinusoidal pulse pattern and using the sending and receiving rates measured over an RTT to produce a time-series of cross-traffic rates. The method then computes the FFT of this time-series and infers elasticity if the FFT at particular frequencies is large.
 
-In principle, it may be possible to implement such sinusoidal pulses within the datapath, but computing the FFT is unlikely to be practical both due to the timing requirements of the ACK clock as well as the difficulty of performing complex calculations in restrictive programming environments such as the kernel. Moreover, implementing the transmitter outside the datapath in CCP allowed for a tighter development-testing loop than writing kernel code.
+The implementation of Nimbus uses CCP to configure the datapath to report the sending and receiving rates periodically (e.g., every 10 ms), maintains a time-series of the measurements in user-space, and performs FFT calculations using a FFT library in Rust~\cite{}. 
+
+Although it is possible to implement such algorithms directly in the datapath, it would be significantly more difficult. For instance, one would need to implement the FFT operations with fixed-point arithmetic. Moreover, implementing the algorithm outside the datapath using CCP allows for a tighter development-testing loop than writing kernel code.
+
+%such sinusoidal pulses within the datapath, but computing the FFT is unlikely to be practical both due to the timing requirements of the ACK clock as well as the difficulty of performing complex calculations in restrictive programming environments such as the kernel. Moreover, implementing the transmitter outside the datapath in CCP allowed for a tighter development-testing loop than writing kernel code.
 %Figure~\ref{fig:capabilities:nimbus-example} shows this pulse pattern and the result of the FFT computation.
+
 We anticipate that in the future, CCP will enable the use of other similarly powerful but computationally-intensive methods such as neural networks.
+
+%such algorithmic technique~\cite{nimbus} uses CCP to compute Fourier transforms on estimates of cross traffic and infer whether it is elastic (buffer-filling) or not.
+%A key component of this technique involves sending traffic in an asymmetric sinusoidal pulse pattern and using the sending and receiving rates measured over an RTT to produce a time-series of cross-traffic rates. The method then computes the FFT of this series and infers elasticity if the FFT at particular frequencies is large.
+
+
+% CCP enables a broad new class of congestion control algorithms.
+% Until now, because congestion control has been embedded in the datapath,
+% algorithms have been strictly tied to the ACK clock.
+% As a result, as data rates rise, algorithms have less time to make decisions,
+% which naturally restricts the computation an algorithm can perform.
+% By contrast, CCP algorithms are decoupled from the ACK clock.
+% Although congestion signals must still be acquired and summarized at ever-faster rates, CCP algorithms can amortize computation across different time scales, and use sophisticated data structures and computations that may be unwise on datapaths like the kernel.
+
+
+% In principle, it may be possible to implement such sinusoidal pulses within the datapath, but computing the FFT is unlikely to be practical both due to the timing requirements of the ACK clock as well as the difficulty of performing complex calculations in restrictive programming environments such as the kernel. Moreover, implementing the transmitter outside the datapath in CCP allowed for a tighter development-testing loop than writing kernel code.
+% %Figure~\ref{fig:capabilities:nimbus-example} shows this pulse pattern and the result of the FFT computation.
+% We anticipate that in the future, CCP will enable the use of other similarly powerful but computationally-intensive methods such as neural networks.
 
 \subsection{Velocity of Development}
 \label{s:capabilities:velocity}
@@ -41,14 +57,14 @@ Copa~\cite{copa} is a recently proposed model-based congestion control algorithm
 It is robust to non-congestive loss, buffer-bloat, and unequal propagation delays. It includes mechanisms to provide TCP competitiveness, accurate minimum RTT estimation, and imperfect pacing.
 
 The authors of Copa used CCP to implement Copa recently, and in the process discovered a small bug that produced an erroneous minimum RTT estimate due to ACK compression. They solved this problem with a small modification to the Copa datapath program,
-and in a few hours were able to improve the performance of their earlier user-space implementation. The improvement is summarized here:\\
+and in a few hours were able to improve the performance of their earlier user-space implementation. The improvement is summarized here:
 
-    \begin{tabular}{c|c|c}
-        Algorithm & Throughput & Mean queue delay \\
-        \hline
-        Copa (UDP) & 1.3 Mbit/s & 9 ms\\
-        Copa (CCP-Kernel) & 8.2 Mbit/s  & 11 ms\\
-    \end{tabular}
+\begin{tabular}{c|c|c}
+    Algorithm & Throughput & Mean queue delay \\
+    \hline
+    Copa (UDP) & 1.3 Mbit/s & 9 ms\\
+    Copa (CCP-Kernel) & 8.2 Mbit/s  & 11 ms\\
+\end{tabular}
 
 \smallskip
 After the ACK compression bug was fixed in the CCP version, Copa achieves higher throughput on a Mahimahi link with 25 ms RTT and 12 Mbit/s rate while maintaining low mean queueing delay. Because of ACK compression, the UDP version over-estimates the minimum RTT by $5\times$.
