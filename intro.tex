@@ -22,7 +22,7 @@ Meanwhile, an operating system's TCP stack is but one example of a {\em datapath
     \vspace{-20pt}
     \caption{Congestion control algorithms over the years.}\label{fig:cctimeline}
     %\caption{As link characteristics diversify, developers have developed a battery of congestion control algorithms, from the ``long-fat pipe'' schemes of the mid-2000s~\cite{westwood, veno, htcp, hybla} to purely delay-based~\cite{vegas, fasttcp, ledbat, nv, timely} and hybrid loss-delay~\cite{illinois, compound} schemes, and more recent proposals~\cite{pcc, remy, sprout, bbr, copa, abc}.}
-    \vspace{-17pt}
+    \vspace{-16pt}
 \end{figure}
 
 New datapaths typically do not offer much in terms of congestion control because implementing these algorithms correctly takes considerable time and effort. For instance, the set of available algorithms in mTCP~\cite{mtcp}, a TCP implementation on DPDK, is limited to a variant of Reno. 

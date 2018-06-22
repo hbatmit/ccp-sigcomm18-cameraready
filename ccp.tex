@@ -52,38 +52,28 @@
 Building a congestion control algorithm in CCP involves
 implementing two callback handlers (\ct{onCreate()} and \ct{onReport()}) in the CCP agent
 and one or more datapath programs.
-%
 When a new flow is created, CCP's datapath component invokes the \ct{onCreate()} handler.
-%
-The implementation of \ct{onCreate()} must install a default datapath program for that flow.
+The implementation of \ct{onCreate()} must install an initial datapath program for that flow.
 %
 Datapath programs could compute summaries over per-packet
 congestion signals (such as a minimum packet delay or a moving average of packet
 delivery rate) and report summaries or high priority conditions
 (such as loss) to the CCP agent.
-%
 On a report, the CCP agent invokes the \ct{onReport()} handler
 which contains the bulk of the logic of the congestion control algorithm.
-%
 The \ct{onReport()} function computes and installs the flow's congestion
 window or sending rate using the signals from the datapath report.
-%
 It may also replace the datapath program entirely with different logic.
+
 \subsection{Datapath program abstractions}
 \label{s:ccp:datapath_programs}
- CCP's datapath programs are written in a restrictive
-domain-specific language.
-Conceptually, datapath programs contain state initializations, \ie a \ct{def}
-clause, and event specifications, \ie a series of \ct{when} clauses.
-The datapath checks event conditions on every incoming packet and timeout event.
-If an event condition evaluates to true, the body of the \ct{when} clause is executed as the corresponding
-action.
-For example, the following program counts the cumulative
-number of packets acknowledged and lost, and it reports these counters immediately upon a loss:
+CCP's datapath programs are written in a simple domain specific language.
+These programs exist in order to provide a per ACK execution environment, where algorithms can define and update variables per ACK and perform \textit{control actions}, in response to the values of these variables.
 
+Listing~\ref{lst:design:simple_datapath_prog} shows a program that counts the cumulative number of packets acknowledged and lost and reports these counters immediately upon a loss.
+\begin{listing}[t]
 {\footnotesize
-\begin{minted}
-{lisp}
+\begin{minted}[xleftmargin=\parindent,linenos]{lisp}
 (def (Report (volatile acked 0) (volatile lost 0)))
 (when true
   (:= Report.acked (+ Report.acked Ack.bytes_acked))
@@ -91,23 +81,64 @@ number of packets acknowledged and lost, and it reports these counters immediate
   (fallthrough))
 (when (> Report.lost 0) (report))
 \end{minted}
+\caption{A simple datapath program to count bytes acked and report on losses.} \label{lst:design:simple_datapath_prog}
 }
+\end{listing}
+The first statement of the program allows users to define custom variables.
+The ``Report'' block signifies that these variables should be included in the report message sent to the CCP agent.
+The \ct{volatile} marker means that these variables should be reset to their initial values, 0, after every report to the CCP agent.
 
-Here, \texttt{(when true ...)} signifies that the body should be evaluated on every packet.
-Correspondingly, \texttt{(fallthrough)} indicates that subsequent \texttt{when} clauses should be evaluated.
-The \ct{report} instruction causes the datapath to
-transmit the \ct{acked} and \ct{lost} byte counters to the slow path whenever
-the \ct{lost} counter becomes greater than zero.
-Since \ct{acked} and \ct{lost} are marked \ct{volatile}, these values are reset to their initial value, 0, 
-after every call to \ct{report}.
+Following the \texttt{def} block, \textit{fold functions} provide custom summaries over primitive congestion signals.
+Datapath programs have read access to these \textit{primitive congestion signals} (prefixed with ``Ack.'' or ``Flow.'' to specify their measurement period), which are exposed by the datapath on every incoming packet. Such signals include the round trip delay sample, the number of bytes the datapath believes have been dropped by the network, and the delivery rates of packets. Table ~\ref{tab:api} enumerates the primitive congestion signals we support.
+Users can write simple mathematical summaries over these primitive signals, as shown in Lines 3-4 of Listing~\ref{lst:design:simple_datapath_prog}.
 
-Datapath programs have read access to {\em primitive congestion signals} 
-(prefixed with ``\ct{Ack.}'' or ``\ct{Flow.}'' to specify their measurement period) that are
-exposed by the datapath on every incoming packet.
-Such signals include statistics such as the round trip delay sample obtained
-from the packet, the number of bytes that the stack believes have been dropped
-by the network, the delivery rate of packets at the receiver, and so on.
-Table~\ref{tab:api} enumerates the primitive congestion signals we support.
+Finally, algorithms can perform control actions in response to conditions defined by the fold function variables, \eg updating a rate or cwnd or reporting the user defined variables to the CCP agent.
+As shown in Listing~\ref{lst:design:simple_datapath_prog}, the program defines a series of \ct{when} clauses, and performs the following block only if the condition was evaluated to true.
+
+CCP's datapath program language provides an event driven programming model.
+\ct{(when true...)} signifies that the body should be evaluated on every packet.
+This is where the program might calculate fold function summaries.
+\ct{when} clauses also have access to all the fold function variables, as well as timing related counters.
+If so, the \ct{report} instruction causes the datapath to transmit the \ct{acked} and \ct{lost} counters to the CCP agent.
+By default, the program evaluates until one \ct{when} clause evaluates to true; the \ct{(fallthrough)} instruction at the end of the first \ct{when} indicates that susbequent \ct{when} clauses should also be evaluated.
+
+%  CCP's datapath programs are written in a restrictive
+% domain-specific language.
+% Conceptually, datapath programs contain state initializations, \ie a \ct{def}
+% clause, and event specifications, \ie a series of \ct{when} clauses.
+% The datapath checks event conditions on every incoming packet and timeout event.
+% If an event condition evaluates to true, the body of the \ct{when} clause is executed as the corresponding
+% action.
+% For example, the following program counts the cumulative
+% number of packets acknowledged and lost, and it reports these counters immediately upon a loss:
+
+% {\footnotesize
+% \begin{minted}
+% {lisp}
+% (def (Report (volatile acked 0) (volatile lost 0)))
+% (when true
+%   (:= Report.acked (+ Report.acked Ack.bytes_acked))
+%   (:= Report.lost  (+ Report.lost  Ack.lost_pkts_sample))
+%   (fallthrough))
+% (when (> Report.lost 0) (report))
+% \end{minted}
+% }
+
+% Here, \texttt{(when true ...)} signifies that the body should be evaluated on every packet.
+% Correspondingly, \texttt{(fallthrough)} indicates that subsequent \texttt{when} clauses should be evaluated.
+% The \ct{report} instruction causes the datapath to
+% transmit the \ct{acked} and \ct{lost} byte counters to the slow path whenever
+% the \ct{lost} counter becomes greater than zero.
+% Since \ct{acked} and \ct{lost} are marked \ct{volatile}, these values are reset to their initial value, 0, 
+% after every call to \ct{report}.
+
+% Datapath programs have read access to {\em primitive congestion signals} 
+% (prefixed with ``\ct{Ack.}'' or ``\ct{Flow.}'' to specify their measurement period) that are
+% exposed by the datapath on every incoming packet.
+% Such signals include statistics such as the round trip delay sample obtained
+% from the packet, the number of bytes that the stack believes have been dropped
+% by the network, the delivery rate of packets at the receiver, and so on.
+% Table~\ref{tab:api} enumerates the primitive congestion signals we support.
 
 \subsection{CCP algorithm logic}
 \label{s:ccp:ccp_algorithm_logic}

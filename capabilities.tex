@@ -10,7 +10,7 @@
 \begin{figure*}[t!]
     \centering
     \includegraphics[width=2\columnwidth]{img/new-wora}
-    \caption{Comparison of \textit{the same} CCP implementation of Cubic and Copa run on three \textit{different} datapaths with a fixed-rate bottleneck link. %The congestion window naturally evolves differently on each datapath, but the characteristic shapes of both algorithms are clearly visible.
+    \caption{Comparison of \textit{the same} CCP implementation of Cubic and Copa run on three \textit{different} datapaths. Copa is run on a 12 Mbps link for all three datapaths. For Cubic, we use a 48 Mbps link on the QUIC and kernel datapaths. mTCP did not exhibit stable behavior at higher bandwidths, so we ran mTCP at 12 Mbps; this is why the congestion window is lower.%The congestion window naturally evolves differently on each datapath, but the characteristic shapes of both algorithms are clearly visible.
     }\label{fig:datapaths:wora}
 \end{figure*}
 
@@ -90,6 +90,6 @@ Correct implementation of congestion control algorithms, especially increasingly
 As a result, new algorithms are often implemented in a single datapath and new datapaths have very few algorithms implemented. 
 CCP enables algorithm designers to focus on building and testing a single solid implementation of their algorithm that users can then run on any (supported) datapath. 
 
-To exhibit this capability, we ran the same implementation of both Cubic (not currently implemented in mTCP) and Copa (\S\ref{s:capabilities:velocity}, not currently implemented in any major datapath) on the three different datapaths and plot the congestion window evolution over time in Figure~\ref{fig:datapaths:wora}.
+To exhibit this capability, we ran the same implementation of both Cubic (not previously implemented in mTCP) and Copa (\S\ref{s:capabilities:velocity}, not previously implemented in any widely-used datapath) on the three datapaths and plot the congestion window evolution over time in Figure~\ref{fig:datapaths:wora}.
 
 \textit{As expected}, the congestion window naturally evolves differently on each datapath, but the characteristic shapes of both algorithms are clearly visible. Copa uses triangular oscillations around an equilibrium of 1 BDP worth of packets (22 in this case), periodically draining the queue in an attempt to estimate the minimum RTT.
