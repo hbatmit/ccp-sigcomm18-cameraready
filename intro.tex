@@ -45,7 +45,7 @@ We use the term {\em Congestion Control Plane (CCP)} to refer to this off-datapa
       datapath. The resulting code is easier to read and maintain. In our implementation, congestion control algorithms in CCP are written in Rust or Python and run in user-space. 
     \item {\bf New capabilities:} CCP makes it easier to provide new
       capabilities, such as aggregate control of multiple flows as previously
-      proposed in the Congestion Manager (CM)~\cite{cm}, and algorithms that require significant computation (e.g., signal processing, machine learning, \etc) using \userspace programming environments. These algorithms are hard to write as window updates on incoming ACKs.
+      proposed in the Congestion Manager~\cite{cm}, and algorithms that require significant computation (e.g., signal processing, machine learning, \etc) using \userspace programming environments. These algorithms are hard to write as window updates on incoming ACKs.
       %All the benefits of a \userspace programming environment (libraries, debuggers, \etc) will be available to       developers.
 \end{enumerate}
 

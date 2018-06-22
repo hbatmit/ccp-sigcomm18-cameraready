@@ -11,19 +11,18 @@ Exploring this implementation option remains future work.
 Linux includes a pluggable TCP API~\cite{lwn-pluggable-tcp}, which exposes various statistics for every connection, including delay, rates averaged over the past RTT, ECN information, timeouts, and packet loss.
 icTCP~\cite{icTCP} is a modified TCP stack in the Linux kernel that allows user-space programs to modify specific TCP-related variables, such as the congestion window, slow start threshold, receive window size, and retransmission timeout. 
 QUIC~\cite{quic} also offers pluggable congestion control. 
-While these APIs each support a wide variety of congestion control algorithms---indeed, we use the Linux and QUIC pluggable congestion control APIs to implement support for CCP---
+These APIs each support a wide variety of congestion control algorithms---indeed, we use the Linux and QUIC pluggable congestion control APIs to implement support for CCP. CCP's API draws from them, but has an emphasis on asynchronous control.
 %CCP extracts common primitives for congestion control across multiple datapaths, supporting off-datapath programmability with the performance of in-datapath implementations.
 
-HotCocoa~\cite{hotcocoa} introduces a domain specific language to allow developers to compile congestion control algorithms directly into  programmable NICs to increase efficiency in packet processing. In contrast, CCP allows developers to write algorithms in user-space with the full benefit of libraries and conveniences such as  floating point operations (\eg for Fourier transforms). 
-In addition, the congestion signals exposed by CCP datapaths are not tied to the ACK clock, allowing users to implement a wider class of algorithms. 
+HotCocoa~\cite{hotcocoa} introduces a domain specific language to allow developers to compile congestion control algorithms directly into programmable NICs to increase efficiency in packet processing. In contrast, CCP allows developers to write algorithms in user-space with the full benefit of libraries and conveniences such as  floating point operations (\eg for Fourier transforms). 
 
 Structured Streams~\cite{structuredstreams} proposed a datapath that prevents head-of-line blocking by managing streams between the the same two hosts together and applying a hereditary structure on streams. CCP does not change the underlying structure of the transport on the datapath; the Linux kernel datapath, for example, uses TCP streams. 
 
 Finally, there is a wide range of previous literature on moving kernel functionality into user-space. 
-%The Exokernel~\cite{exokernel} is an operating system architecture that securely exports hardware functionality into untrusted user-space library operating systems.  
+%The Exokernel~\cite{exokernel} is an operating system architecture that securely exports hardware functionality into untrusted user-space library operating systems.
 Arrakis~\cite{arrakis2014} is system that facilitates kernel-bypass networking for applications via SR-IOV. 
 IX~\cite{ix} is a dataplane operating system that separates the management functionality of the kernel from packet processing. 
-Alpine~\cite{alpine} moves all of IP and TCP layer into user-space.
+Alpine~\cite{alpine} moves all of TCP and IP into user-space.
 Whereas these systems use hardware virtualization to allow applications to have finer grained control over their networking resources,
 CCP exposes only congestion control information to user-space. 
 Moreover, CCP is also agnostic to the datapath; datapaths for library operating systems could be CCP datapaths.
