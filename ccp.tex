@@ -99,7 +99,7 @@ CCP's datapath program language provides an event driven programming model.
 \ct{(when true...)} signifies that the body should be evaluated on every packet.
 This is where the program might calculate fold function summaries.
 \ct{when} clauses also have access to all the fold function variables, as well as timing related counters.
-If so, the \ct{report} instruction causes the datapath to transmit the \ct{acked} and \ct{lost} counters to the CCP agent.
+The \ct{report} instruction causes the datapath to transmit the \ct{acked} and \ct{lost} counters to the CCP agent.
 By default, the program evaluates until one \ct{when} clause evaluates to true; the \ct{(fallthrough)} instruction at the end of the first \ct{when} indicates that susbequent \ct{when} clauses should also be evaluated.
 
 %  CCP's datapath programs are written in a restrictive
