@@ -7,11 +7,15 @@
 \end{figure}
 
 \noindent
-Unless otherwise specified, we evaluated our implementation of CCP using Linux $4.14.0$ on a machine with four $2.8$ Ghz cores and $64$ GB memory.
+We evaluated the following aspects of CCP:
 
 \paragrapha{Fidelity (\S\ref{sec:eval:fidelity})} Do algorithms implemented in CCP behave similarly to algorithms implemented within the datapath? Using the Linux kernel datapath as a case study, we explore both achieved throughput and delay for persistently backlogged connections as well as achieved flow completion time for dynamic workloads.
 
 \paragrapha{Overhead of datapath communication (\S\ref{sec:eval:whyfold})} How expensive is communication between CCP and the datapath?
+
+\paragrapha{High Bandwidth, Low RTT (S\ref{sec:eval:lowrtt})} We use ns-2 simulations to demonstrate that CCP can be feasible even in ultra-low RTT environments beyond the scenario in \S\ref{sec:eval:whyfold:scale}.
+
+Unless otherwise specified, we evaluated our implementation of CCP using Linux $4.14.0$ on a machine with four $2.8$ Ghz cores and $64$ GB memory. 
 
 \subsection{Fidelity}
 \label{sec:eval:fidelity}
@@ -23,7 +27,7 @@ not only does CCP's implementation of Cubic exhibit a window update consistent w
 
 For the remainder of this subsection, we compare the performance of CCP and kernel implementations of NewReno and Cubic on three metrics (throughput and delay in \S\ref{sec:eval:fidelity:tput-delay}, and FCT in \S\ref{sec:eval:fidelity:fct}) and three scenarios, all using Mahimahi.
 
-\subsubsection{Throughput and Delay}
+\subsubsection{Throughput and Delay.}
 \label{sec:eval:fidelity:tput-delay}
 
 We study the following scenarios:
@@ -53,7 +57,7 @@ Overall, both distributions are close, suggesting that CCP's implementations mak
 \caption{Comparison of achieved throughput over 20 ms periods. The achieved throughput distributions are nearly identical across the three scenarios and two congestion control algorithms evaluated.}\label{fig:eval:fidelity:cdfs}
 \end{figure}
 
-\subsubsection{Flow Completion Time}
+\subsubsection{Flow Completion Time.}
 \label{sec:eval:fidelity:fct}
 
 \begin{figure}[t]
@@ -93,7 +97,7 @@ Across all flow sizes, CCP achieves FCTs 0.02\% lower than the kernel in the med
 \subsection{Performance}
 \label{sec:eval:whyfold}
 
-\subsubsection{Measurement Staleness}
+\subsubsection{Measurement Staleness.}
 \label{sec:eval:whyfold:stale}
 \begin{figure}[t]
 \centering
@@ -101,9 +105,7 @@ Across all flow sizes, CCP achieves FCTs 0.02\% lower than the kernel in the med
     \caption{Minimum time required to send information to the datapath and receive a response using different IPC mechanisms. The dotted lines show latency when the process is bound to a single CPU core.}\label{fig:eval:ipc-latency}
 \end{figure}
 
-Because Portus runs in a different address space than datapath code, there is some delay between the datapath gathering a report and algorithm code acting upon the report due to overheads in inter-process
-%(or communication from the kernel datapath)
-communication (IPC).
+Because our CCP implementation, Portus, runs in a different address space than datapath code, there is some delay between the datapath gathering a report and algorithm code acting upon the report.
 In the worst case, a severely delayed measurement could cause an algorithm to make an erroneous window update.
 
 Fortunately, as Figure~\ref{fig:eval:ipc-latency} shows, this overhead is small. We calculate an IPC RTT by sending a time-stamped message to a kernel module (or \userspace{} process in the case of a Unix-domain socket). The receiver then immediately echoes the message, and we measure the elapsed time at the originating process.
@@ -142,11 +144,11 @@ In all cases, the $95^{\text{th}}$ percentile latency is less than $30$ $\mu$s. 
     \includegraphics[width=\columnwidth]{img/40g-rct}
     \subcaption{Tail flow completion time at 40 Gbit/s}\label{fig:eval:lowrtt:40g}
     \end{subfigure}
-    \caption{Mean tail completion across $50$ simulations. While at $10$ Gbit/s even rare reporting (every $50$ RTTs) has limited overhead (at most $20$\%), at $40$ Gbit/s, a $1$ ms reporting period is necessary to avoid performance degradation.}
+    \caption{Mean tail completion across 50 simulations. While at 10 Gbit/s even rare reporting (every 50 RTTs) has limited overhead (at most 20\%), at 40 Gbit/s, a 1 ms reporting period is necessary to avoid performance degradation.}
     \label{fig:eval:lowrtt}
 \end{figure}
 
-\subsubsection{Scalability}
+\subsubsection{Scalability.}
 \label{sec:eval:whyfold:scale}
 
 CCP naturally has nonzero overhead since more context switches must occur to make congestion control decisions in user-space.

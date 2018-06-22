@@ -1,17 +1,16 @@
-\section{New Capabilities}
+\section{Capabilities}
 \label{s:capabilities}
 
 \begin{figure}
     \centering
     \includegraphics[width=\columnwidth]{img/stair}
-    \caption{$5$ 20-second iperf flows with $10$ second staggered starts. While Reno (right) must individually probe for bandwidth for each new connection, an aggregating congestion controller is able to immediately set the connection's congestion window to the fair share value.}
+    \caption{5 20-second iperf flows with 10 second staggered starts. While Reno (right) must individually probe for bandwidth for each new connection, an aggregating congestion controller is able to immediately set the connection's congestion window to the fair share value.}
     \label{fig:cap:agg}
 \end{figure}
 \begin{figure*}[t!]
     \centering
     \includegraphics[width=2\columnwidth]{img/new-wora}
-    \caption{Comparison of \textit{the same} CCP implementation of Cubic and Copa run on three \textit{different} datapaths. Copa is run on a 12 Mbps link for all three datapaths. For Cubic, we use a 48 Mbps link on the QUIC and kernel datapaths. mTCP did not exhibit stable behavior at higher bandwidths, so we ran mTCP at 12 Mbps; this is why the congestion window is lower.%The congestion window naturally evolves differently on each datapath, but the characteristic shapes of both algorithms are clearly visible.
-    }\label{fig:datapaths:wora}
+    \caption{Comparison of the same CCP implementation of Cubic and Copa run on three different datapaths. Copa is run on a 12 Mbps link for all three datapaths. For Cubic, we use a 48 Mbps link on the QUIC and kernel datapaths. mTCP did not exhibit stable behavior at higher bandwidths, so we ran mTCP at 12 Mbps; this is why the congestion window is lower.}\label{fig:datapaths:wora}
 \end{figure*}
 
 We present four new capabilities enabled by CCP: new classes of congestion control, rapid development and testing of algorithms, congestion control for flow aggregates, and the ability to write an algorithm once and run it on multiple datapaths.
@@ -38,7 +37,7 @@ We anticipate that in the future, CCP will enable the use of other similarly pow
 \label{s:capabilities:velocity}
 
 Copa~\cite{copa} is a recently proposed model-based congestion control algorithm that seeks to maintain a target rate that is inversely proportional to the queuing delay, estimated as the difference of the current RTT and the minimum RTT.
-Under three network models, this is shown to provide quantifiably low delay, and fair and efficient allocation of bandwidth.
+%Under three network models, this is shown to provide quantifiably low delay, and fair and efficient allocation of bandwidth.
 It is robust to non-congestive loss, buffer-bloat, and unequal propagation delays. It includes mechanisms to provide TCP competitiveness, accurate minimum RTT estimation, and imperfect pacing.
 
 The authors of Copa used CCP to implement Copa recently, and in the process discovered a small bug that produced an erroneous minimum RTT estimate due to ACK compression. They solved this problem with a small modification to the Copa datapath program,
@@ -59,14 +58,14 @@ After the ACK compression bug was fixed in the CCP version, Copa achieves higher
 
 % from nimbus nsdi submission's intro
 Congestion control on the Internet is performed by individual TCP connections. Each connection independently probes for bandwidth, detects congestion on its path, and reacts to it.
-This per-connection paradigm for congestion control has served the Internet well for 30 years, but is a poor fit in many modern traffic control scenarios where a large number of nodes exchange traffic between a few sites.
-Examples include: traffic between different datacenters~\cite{b4, swan}; traffic between campuses of an organization; traffic between collaborating universities or companies; traffic between a large content provider (e.g., Netflix) and a network with many clients (e.g., a regional ISP); large-scale data backups from an organization to an external site; etc.
+This per-connection paradigm for congestion control is a poor fit in many modern traffic control scenarios where a large number of nodes exchange traffic between a few sites.
+Examples include: traffic between different datacenters~\cite{b4, swan}; traffic between campuses of an organization; large-scale data backups from an organization to an external site; etc.
 
-A more modest use case is to implement the per-host aggregation proposed by the
+We focus on the per-host aggregation proposed by the
 Congestion Manager two decades ago~\cite{cm}. We used CCP to develop a
 host-level aggregate controller that maintains a single aggregate window or rate
-for a group of flows and allocates that to individual flows---{\em all with no
-  changes to the non-CCP parts of the datapath.}
+for a group of flows and allocates that to individual flows---all with no
+  changes to the non-CCP parts of the datapath.
 
 %
 %Since CCP has visibility into all the flows in the system, it is uniquely positioned as a platform on which users can implement aggregate congestion control.
@@ -92,4 +91,4 @@ CCP enables algorithm designers to focus on building and testing a single solid 
 
 To exhibit this capability, we ran the same implementation of both Cubic (not previously implemented in mTCP) and Copa (\S\ref{s:capabilities:velocity}, not previously implemented in any widely-used datapath) on the three datapaths and plot the congestion window evolution over time in Figure~\ref{fig:datapaths:wora}.
 
-\textit{As expected}, the congestion window naturally evolves differently on each datapath, but the characteristic shapes of both algorithms are clearly visible. Copa uses triangular oscillations around an equilibrium of 1 BDP worth of packets (22 in this case), periodically draining the queue in an attempt to estimate the minimum RTT.
+As expected, the congestion window naturally evolves differently on each datapath, but the characteristic shapes of both algorithms are clearly visible. Copa uses triangular oscillations around an equilibrium of 1 BDP worth of packets (22 in this case), periodically draining the queue in an attempt to estimate the minimum RTT.

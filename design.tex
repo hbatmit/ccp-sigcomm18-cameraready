@@ -17,7 +17,7 @@ to libraries (\eg for optimization, machine learning, \etc).
 Further, new algorithms should also achieve high performance running at tens of
 Gbit/s per connection with small packet delays in the datapath.
 
-\subsection{Isolating algorithms from the datapath}
+\subsection{Isolating Algorithms from the Datapath}
 \label{s:datapath:isolation}
 Should congestion control algorithms run in the same address space as the
 datapath? There are conflicting factors to consider:
@@ -29,7 +29,7 @@ datapath are in the same address space, bugs in algorithm or library code could
 cause datapath crashes or create vulnerabilities leading to privilege
 escalations in the kernel datapath.
 
-\Para{Flexibility.} Placing congestion control functionality outside the datapath provides more flexibility. For example, we anticipate future use-cases of the CCP architecture where
+\Para{Flexibility.} Placing congestion control functionality outside the datapath provides more flexibility. For example, we anticipate future use cases of the CCP architecture where
 a congestion control algorithm may run on a machine different from the sender,
 enabling control policies across groups of hosts.
 
@@ -74,14 +74,14 @@ These performance and usability impediments, in our view, significantly diminish
     \caption{Single-flow throughput for different reporting intervals between
       the Linux kernel and CCP \userspace, compared to kernel TCP
       throughput. Per-ACK feedback (0 $\mu$s interval) reduces throughput by
-      32\% while using a $10$ ms reporting interval
+      32\% while using a 10 ms reporting interval
       achieves almost identical throughput to the kernel. Results as the number
       of flows  increases are in
       \S\ref{sec:eval:whyfold}.}\label{tab:perf:interval}
       \vspace{-10pt}
 \end{table}
 
-\subsection{Decoupling congestion control from the ACK clock}
+\subsection{Decoupling Congestion Control from the ACK Clock}
 \label{sec:design:decoupling-cc-from-ack-clock}
 
 Typical congestion control implementations in the Linux kernel are coupled to the so-called ``ACK-clock,'' \ie algorithm functionality is invoked upon receiving a packet acknowledgment in the networking stack.
@@ -107,7 +107,7 @@ Given that CCP algorithms operate over measurements supplied only infrequently, 
 Indeed, in \S\ref{sec:eval:fidelity} we show that reporting on an RTT time-scale does not affect the fidelity of CCP algorithm implementations relative to traditional in-kernel implementations.
 
 %\subsection{Exercising Control over Datapath Functions}
-\subsection{Supporting per-ACK logic within the datapath}
+\subsection{Supporting per-ACK Logic Within the Datapath}
 \label{sec:design:exercising-control-over-datapath}
 \label{sec:design:restricted-datapath-functions}
 
