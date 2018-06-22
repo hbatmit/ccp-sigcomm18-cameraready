@@ -114,7 +114,7 @@ Table~\ref{tab:api} enumerates the primitive congestion signals we support.
 The \ct{onReport()} handler provides a way to
 implement congestion control actions in \userspace in reaction to reports from the datapath.
 For example, a simple additive-increase
-multiplicative-decrease (AIMD) algorithm could be implemented in Python\footnote{Our CCP implementation is in Rust and exposes Python bindings.} using
+multiplicative-decrease (AIMD) algorithm could be implemented in Python\footnote{Our CCP implementation is in Rust and exposes Python bindings (\S\ref{s:datapath}).} using
 the \ct{acked} and \ct{lost} bytes reported every round-trip time from the datapath:
 
 {\footnotesize
