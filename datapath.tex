@@ -27,6 +27,7 @@ An implementation of the CCP datapath must perform the following functions:
 \subsection{Safe execution of datapath programs}
 \label{s:datapath:fold}
 Datapaths are responsible for safely executing the program sent from the user-space CCP module. While CCP will compile the instructions and check for mundane errors (e.g., use of undefined variables) before installation, it is the datapath’s responsibility to ensure safe interpretation of the instructions. For example, datapaths should prevent divide by zero errors when calculating user defined variables and guarantee that programs cannot overwrite the congestion primitives.
+\footnote{Algorithms are still allowed to set arbitrary congestion windows or rates, in the same way that any application can congest the network using UDP sockets.}
 
 Thankfully, this task is straightforward as datapath programs are limited in functionality: 
 programs may not enter loops, perform floating point operations, define functions or data structures, allocate memory, or use pointers. Rather, programs are strictly a way to express arithmetic computations over a limited set of primitives, define when and how to set congestion windows and pacing rates, and report measurements.

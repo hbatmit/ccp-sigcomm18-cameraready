@@ -9,7 +9,7 @@
 \end{figure}
 \begin{figure*}[t!]
     \centering
-    \includegraphics[width=2\columnwidth]{img/datapath-compare.pdf}
+    \includegraphics[width=2\columnwidth]{img/new-wora}
     \caption{Comparison of \textit{the same} CCP implementation of Cubic and Copa run on three \textit{different} datapaths with a fixed-rate bottleneck link. %The congestion window naturally evolves differently on each datapath, but the characteristic shapes of both algorithms are clearly visible.
     }\label{fig:datapaths:wora}
 \end{figure*}
@@ -90,38 +90,6 @@ Correct implementation of congestion control algorithms, especially increasingly
 As a result, new algorithms are often implemented in a single datapath and new datapaths have very few algorithms implemented. 
 CCP enables algorithm designers to focus on building and testing a single solid implementation of their algorithm that users can then run on any (supported) datapath. 
 
-%We could immediately run the same implementations of various algorithms, developed with the kernel datapath, on QUIC and mTCP. We demonstrate this write-once, run-anywhere capability by comparing the behavior of TCP Cubic and Copa over all three datapaths.
-
 To exhibit this capability, we ran the same implementation of both Cubic (not currently implemented in mTCP) and Copa (\S\ref{s:capabilities:velocity}, not currently implemented in any major datapath) on the three different datapaths and plot the congestion window evolution over time in Figure~\ref{fig:datapaths:wora}.
 
 \textit{As expected}, the congestion window naturally evolves differently on each datapath, but the characteristic shapes of both algorithms are clearly visible. Copa uses triangular oscillations around an equilibrium of 1 BDP worth of packets (22 in this case), periodically draining the queue in an attempt to estimate the minimum RTT.
-
-%Show \texttt{cwnd} evolution of new algorithms that these datapaths could not previously support. Show how this exhibits the high-level behavior we'd expect from these algorithms (need to ask Venkat about Copa, say something about cubic ramping back up to wmax, then probing max bandwidth).
-% We have run Copa and Cubic on all 3 datapaths, the kernel, QUIC and mTCP. We expect the behavior of the same algorithms across datapaths to be different for portions, e.g. slowstart - but the general behavior of each algorithm is 
-
-
-%\begin{figure}[t]
-%\centering
-%\begin{subfigure}{.45\columnwidth}
-%\includegraphics[width=\columnwidth]{img/copa-quic-wora.pdf}
-%\subcaption{Copa on Quic}\label{fig:capabilities:wora:copa-quic}
-%\end{subfigure}
-%
-%\begin{subfigure}{.45\columnwidth}
-%\includegraphics[width=\columnwidth]{img/copa-kernel-wora.pdf}
-%\subcaption{Copa on Kernel}\label{fig:capabilities:wora:copa-kernel}
-%\end{subfigure}
-%
-%\begin{subfigure}{.45\columnwidth}
-%\includegraphics[width=\columnwidth]{img/cubic-quic-wora.pdf}
-%\subcaption{Cubic on Quic}\label{fig:capabilities:wora:cubic-quic}
-%\end{subfigure}
-%
-%
-%\begin{subfigure}{.45\columnwidth}
-%\includegraphics[width=\columnwidth]{img/cubic-kernel-wora.pdf}
-%\subcaption{Cubic on Kernel}\label{fig:capabilities:wora:cubic-kernel}
-%\end{subfigure}
-%
-%\caption{Cubic is run on a link with bandwidth 96 Mbps, 20 ms round trip time, and 1 BDP of buffering, for the Kernel and QUIC datapaths. %As Copa performs better at lower link rates, Copa is run on a link with bandwidth 12 Mbps, 20 ms round trip time, and 1 BDP buffering, for %all three datapaths. }\label{fig:capabilities:wora}
-%\end{figure}

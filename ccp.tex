@@ -48,18 +48,9 @@
     \caption{Datapath language: congestion signals, operators, and scopes.}\label{tab:api}
 \end{table}
 
-Writing an algorithm in CCP involves two considerations: logic in the CCP agent and in the datapath.
-This two-tier programming model involving a slow and a fast execution environment allows
-algorithms to perform computations flexibly in the CCP agent, \eg compute a cubic
-root or use machine learning to determine a sending rate, while
-providing high performance by retaining frequently invoked logic within
-the datapath.
-
-\ma{Again, too much repetition. We just said this in the 'Supporting per-ACK ...' paragraph above.}
-
-\ngs{a figure would be nice to show this flow of info. Or figure 2 must be augmented somehow.}
+%\ngs{a figure would be nice to show this flow of info. Or figure 2 must be augmented somehow.}
 Building a congestion control algorithm in CCP involves
-implementing two callback handlers ( \ct{onCreate()} and \ct{onReport()}) in the CCP agent
+implementing two callback handlers (\ct{onCreate()} and \ct{onReport()}) in the CCP agent
 and one or more datapath programs.
 %
 When a new flow is created, CCP's datapath component invokes the \ct{onCreate()} handler.
@@ -91,7 +82,8 @@ For example, the following program counts the cumulative
 number of packets acknowledged and lost, and it reports these counters immediately upon a loss:
 
 {\footnotesize
-\begin{minted}{lisp}
+\begin{minted}
+{lisp}
 (def (Report (volatile acked 0) (volatile lost 0)))
 (when true
   (:= Report.acked (+ Report.acked Ack.bytes_acked))
@@ -139,7 +131,7 @@ def onReport(self, report):
 
 We have implemented complex functionality within congestion control algorithms
 by leveraging slow-path logic, for example, a congestion control
-algorithm that uses signal processing techniques~\cite{nimbus}.
+algorithm that uses Fast Fourier Transform (FFT) operations~\cite{nimbus}.
 
 If the round-trip time of the network is a few milliseconds or more,
 it is possible to locate congestion control algorithm logic entirely within CCP
@@ -151,7 +143,7 @@ As a more involved example, we show below
 how various components of TCP BBR~\cite{bbr} are implemented using the CCP API.
 A BBR sender estimates the rate of packets delivered to the receiver, and sets
 its sending rate to the maximum delivered rate (over a sliding time
-window), which is believed to the rate of the bottleneck link between the sender
+window), which is believed to be the rate of the bottleneck link between the sender
 and the receiver.
 
 This filter over the received rate is expressed simply in a fold function:
@@ -192,6 +184,7 @@ Each \texttt{when} clause represents a pulse state transition and is conditioned
 resettable timer \texttt{Timer.micros}.
 Upon the transition, the handler sets the \texttt{Rate} and advances \texttt{pulseState}.
 After the last phase of the pulse, the handler would reset the timer and \ct{pulseState} to restart the sending pattern (not shown).
+%\ma{is this too complicated to show? it would be nice to show a complete example.}
 
 Figure~\ref{fig:ccp:bbr} shows\footnote{We only implement BBR's PROBE\_BW and PROBE\_RTT. Our implementation is here: \url{github.com/ccp-project/bbr}.}
 the impact of BBR's bandwidth probing on the
@@ -232,13 +225,16 @@ fn create(...) {
   (when (> Micros Flow.rtt_sample_us) (report) (reset))");
 }
 fn onReport(...) {
-  let acked = report.get_field("Report.acked");
-  self.cwnd += acked;
-  datapath.update_field(&[("Cwnd", self.cwnd)]);
+  if report.get_field("Report.loss") == 0 {
+    let acked = report.get_field("Report.acked");
+    self.cwnd += acked;
+    datapath.update_field(&[("Cwnd", self.cwnd)]);
+  } else { /* exit slow start */ }
 }
 \end{minted}
 }
-\caption{A CCP implementation of slow start (exiting slow start not shown).} \label{lst:ccp:ss}
+\caption{A CCP implementation of slow start.} \label{lst:ccp:ss}
+\vspace{-15pt}
 \end{listing}
 
 \begin{figure}
