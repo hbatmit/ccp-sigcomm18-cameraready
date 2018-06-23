@@ -52,7 +52,12 @@ Hari Balakrishnan
 \ccsdesc[500]{Networks~Transport protocols}
 \ccsdesc[300]{Networks~Network protocol design}
 \keywords{Congestion Control}
+
+% fix right arrow in CCS keywords
 \settopmatter{printacmref=false} % Removes citation information below abstract
+\newcommand*{\origrightarrow}{$\rightarrow$}
+\let\oldarrow\textrightarrow
+\renewcommand*{\textrightarrow}{\fontfamily{cmr}\selectfont\origrightarrow}
 
 \begin{sloppypar}
 \include{abstract}
