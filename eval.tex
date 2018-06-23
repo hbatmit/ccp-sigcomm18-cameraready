@@ -13,8 +13,10 @@ We evaluated the following aspects of CCP:
 
 \paragrapha{Overhead of datapath communication (\S\ref{sec:eval:whyfold})} How expensive is communication between CCP and the datapath?
 
-\paragrapha{High Bandwidth, Low RTT (S\ref{sec:eval:lowrtt})} We use ns-2 simulations to demonstrate that CCP can be feasible even in ultra-low RTT environments beyond the scenario in \S\ref{sec:eval:whyfold:scale}.
+\paragrapha{High bandwidth, low RTT (\S\ref{sec:eval:lowrtt})} We use ns-2 simulations to demonstrate that CCP's method of taking congestion control actions periodically can perform well even in ultra-low RTT environments.
 
+%beyond the scenario in \S\ref{sec:eval:whyfold:scale}.
+\smallskip
 Unless otherwise specified, we evaluated our implementation of CCP using Linux $4.14.0$ on a machine with four $2.8$ Ghz cores and $64$ GB memory. 
 
 \subsection{Fidelity}
@@ -36,7 +38,7 @@ We study the following scenarios:
 
 \paragrapha{Cellular link (``cell'')} A 20 ms RTT variable-rate link with a 100-packet buffer based on a Verizon LTE bandwidth trace~\cite{mahimahi}.
 
-\paragrapha{Stochastic Drops (``drop'')} A 20 ms RTT link with a fixed $96$ Mbit/s rate, but with $0.01$\% stochastic loss and an unlimited buffer. To ensure that both tested algorithms encountered exactly the same conditions, we modified Mahimahi to use a fixed random seed when deciding whether to drop a packet.
+\paragrapha{Stochastic drops (``drop'')} A 20 ms RTT link with a fixed $96$ Mbit/s rate, but with $0.01$\% stochastic loss and an unlimited buffer. To ensure that both tested algorithms encountered exactly the same conditions, we modified Mahimahi to use a fixed random seed when deciding whether to drop a packet.
 
 These three scenarios represent a variety of environments congestion control algorithms encounter in practice, from predictable to mobile to bufferbloated paths. We calculate, per-RTT over twenty 1-minute experiments, the achieved throughput (\ref{fig:eval:fidelity:tput-cdf}) and delay (\ref{fig:eval:fidelity:delay-cdf}), and show the ensuing distributions in Figure~\ref{fig:eval:fidelity:cdfs}.
 
@@ -80,8 +82,8 @@ Overall, both distributions are close, suggesting that CCP's implementations mak
 \caption{CDF comparisons of flow completion times. Note the differing x-axes.}\label{fig:eval:fidelity:fct}
 \end{figure}
 
-To measure flow completion times (FCT), we use a flow size distribution compiled from CAIDA Internet traces~\cite{caida} in a similar setting to the ``fixed'' scenario above, modified to form an incast scenario; we use a $100$ ms RTT and a $192$ Mbit/s link.
-To generate traffic, we use an empirical traffic generator to sample flow sizes from the distribution and send flows of that size in an incast traffic pattern to a single client behind the emulated Mahimahi link. We generate flows with 50\% link load, and generate $100,000$ flows to the client in a closed loop from $50$ sending servers using persistent connections to the client.
+To measure flow completion times (FCT), we use a flow size distribution compiled from CAIDA Internet traces~\cite{caida} in a similar setting to the ``fixed'' scenario above; we use a $100$ ms RTT and a $192$ Mbit/s link.
+To generate traffic, we use a traffic generator to sample flow sizes from the distribution and send flows of that size according to a Poisson  arrival process to a single client behind the emulated Mahimahi link. We generate flows with 50\% average link load, and generate $100,000$ flows to the client from $50$ sending servers using persistent connections to the client.
 We used Reno as the congestion control algorithm in both cases. To ensure that the kernel-native congestion control ran under the same conditions as the CCP implementation, we disabled the slow-start-after-idle option.
 
 Of the $100,000$ flows we sampled from the CAIDA workload, $97,606$ were $10$ KB or less, comprising $487$ MB, while the $95$ flows greater than $1$ MB in size accounted for $907$ MB out of the workload's total of $1.7$ GB.
@@ -152,12 +154,13 @@ In all cases, the $95^{\text{th}}$ percentile latency is less than $30$ $\mu$s. 
 \label{sec:eval:whyfold:scale}
 
 CCP naturally has nonzero overhead since more context switches must occur to make congestion control decisions in user-space.
-We test two scenarios as the number of flows in the system increases exponentially from $1$ to $1024$.
+We test two scenarios as the number of flows in the system increases exponentially from $1$ to $64$.
 In both scenarios, we test CCP's implementation of Reno and Cubic against the Linux kernel's. We measure average throughput and CPU utilization in $1$ second intervals over the course of $10$ $15$-second experiments using iperf~\cite{iperf}. We use a reporting interval of $10$ ms.
 
 We omit mTCP and QUIC from these scalability micro-benchmarks and focus on the kernel datapath. The QUIC toy server is mainly used for integration testing and does not perform well as the number of flows increase; we confirmed this behavior with Google's QUIC team. Similarly, after discussion with the mTCP authors, we were unable to run mTCP at sufficient speeds to saturate a localhost or 10 Gbit/sec connection.
 
 \paragrapha{Localhost microbenchmark} We measure achieved throughput on a loopback interface as the number of flows increases. As the CPU becomes fully utilized, the achieved throughput will plateau. Indeed, in Figure~\ref{fig:eval:perf:numflows}, CCP matches the kernel's throughput up to the maximum number of flows tested, 64. 
+%\ma{we said that we tested up to 1024 flows at the beginning of this section. but the results are up to 64 flows?}
 
 \paragrapha{CPU Utilization} To demonstrate the overhead of CCP in a realistic scenario, we scale the number of flows over a single $10$ Gbit/s link between two physical servers and measure the resulting CPU utilization.
 Figure~\ref{fig:eval:perf:10g} shows that as the number of flows increases, the CPU utilization in the CCP case rises steadily. The difference between CCP and the kernel is most pronounced in the region between $16$ and $64$ flows, where CCP uses $2.0\times$ as much CPU than the kernel on average; the CPU utilization nevertheless remains under 8\% in all cases.
@@ -168,7 +171,7 @@ In both the CPU utilization and the throughput microbenchmarks, the differences 
 \label{sec:eval:lowrtt}
 
 To demonstrate it is feasible to separate congestion control from the datapath even in low-RTT and high bandwidth situations, we simulate a datacenter incast scenario using ns-2~\cite{ns2}.
-We model CCP by imposing both forms of delays due to CCP: (i) the period with which actions can be taken (the reporting period) and, (ii) the staleness after which sent messages arrive in CCP. We used our microbenchmarks in \S\ref{sec:eval:whyfold:stale} to set the staleness to 20$\mu$s, and vary the reporting interval since it is controlled by algorithm implementations. 
+We model CCP by imposing both forms of delays due to CCP: (i) the period with which actions can be taken (the reporting period) and, (ii) the staleness after which sent messages arrive in CCP. We used our microbenchmarks in \S\ref{sec:eval:whyfold:stale} to set the staleness to 20~$\mu$s, and vary the reporting interval since it is controlled by algorithm implementations. 
 We used a $20$ $\mu$s RTT with a 50-to-1 incast traffic pattern across $50$ flows with link speeds of $10$ and $40$ Gbit/s. To increase the statistical significance of our results, we introduce a small random jitter to flow start times ($<$10$ \mu$s with 10 Gbit/s bandwidth and $<$2.5 $\mu$s with 40 Gbit/s bandwidth) and run each point $50$ times with a different simulator random seed value and report the mean.
 
 Figure~\ref{fig:eval:lowrtt} compares the results with the baseline set to in-datapath window update. 

@@ -1,4 +1,16 @@
 \section{Writing Algorithms in CCP}
+%
+\begin{figure}[t]
+\centering
+    \includegraphics[width=\columnwidth]{img/ccp_design_sigcomm}
+    \caption{Congestion control algorithms in CCP are distinct from the application and datapath.
+    Users specify an \texttt{onCreate()} handler which CCP calls when a new flow begins. 
+    In this handler, algorithms install (1) a datapath program. 
+    This datapath program aggregates incoming measurements (2) using user-defined fold functions and occasionally sends reports (3) to CCP, which calls the \texttt{onReport()} handler.
+    The \texttt{onReport()} handler can update (4) the datapath program, which uses its defined control patterns to enforce (5) a congestion window or pacing rate.
+    }\label{fig:design}
+\end{figure}
+%
 \label{sec:ccp}
 \begin{table}
     \centering
@@ -48,9 +60,8 @@
     \caption{Datapath language: congestion signals, operators, and scopes.}\label{tab:api}
 \end{table}
 
-%\ngs{a figure would be nice to show this flow of info. Or figure 2 must be augmented somehow.}
-Building a congestion control algorithm in CCP involves
-implementing two callback handlers (\ct{onCreate()} and \ct{onReport()}) in the CCP agent
+Figure~\ref{fig:design} shows the control loop of a congestion control algorithm in CCP.
+Users implement two callback handlers (\ct{onCreate()} and \ct{onReport()}) in the CCP agent
 and one or more datapath programs.
 When a new flow is created, CCP's datapath component invokes the \ct{onCreate()} handler.
 The implementation of \ct{onCreate()} must install an initial datapath program for that flow.
@@ -70,7 +81,7 @@ It may also replace the datapath program entirely with different logic.
 CCP's datapath programs are written in a simple domain specific language.
 These programs exist in order to provide a per ACK execution environment, where algorithms can define and update variables per ACK and perform \textit{control actions}, in response to the values of these variables.
 
-Listing~\ref{lst:design:simple_datapath_prog} shows a program that counts the cumulative number of packets acknowledged and lost and reports these counters immediately upon a loss.
+Figure~\ref{lst:design:simple_datapath_prog} shows a program that counts the cumulative number of packets acknowledged and lost and reports these counters immediately upon a loss.
 \begin{figure}[t]
 {\footnotesize
 \begin{minted}[xleftmargin=\parindent,linenos]{lisp}

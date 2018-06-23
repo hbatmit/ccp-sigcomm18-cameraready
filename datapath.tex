@@ -29,7 +29,7 @@ An implementation of the CCP datapath must perform the following functions:
 
 \subsection{Safe Execution of Datapath Programs}
 \label{s:datapath:fold}
-Datapaths are responsible for safely executing the program sent from the user-space CCP module. While CCP will compile the instructions and check for mundane errors (e.g., use of undefined variables) before installation, it is the datapath’s responsibility to ensure safe interpretation of the instructions. For example, datapaths should prevent divide by zero errors when calculating user defined variables and guarantee that programs cannot overwrite the congestion primitives. However, algorithms are allowed to set arbitrary congestion windows or rates, in the same way that any application can congest the network using UDP sockets.\ma{This was a footnote. I think we can just include it in the text}
+Datapaths are responsible for safely executing the program sent from the user-space CCP module. While CCP will compile the instructions and check for mundane errors (e.g., use of undefined variables) before installation, it is the datapath’s responsibility to ensure safe interpretation of the instructions. For example, datapaths should prevent divide by zero errors when calculating user defined variables and guarantee that programs cannot overwrite the congestion primitives. However, algorithms are allowed to set arbitrary congestion windows or rates, in the same way that any application can congest the network using UDP sockets.
 
 Thankfully, this task is straightforward as datapath programs are limited in functionality: 
 programs may not enter loops, perform floating point operations, define functions or data structures, allocate memory, or use pointers. Rather, programs are strictly a way to express arithmetic computations over a limited set of primitives, define when and how to set congestion windows and pacing rates, and report measurements.
@@ -58,11 +58,11 @@ We additionally modified the QUIC source code to support multiplexing CCP flows 
 
 Unlike QUIC and the Linux kernel, mTCP only implements Reno and does not explicitly expose a congestion control interface for new algorithms. 
 In order to achieve behavior consistent with other datapaths, we also implemented SACK and packet pacing; these features were previously lacking.
-
-mTCP's lack of support for SACK caused us problems: when it observes a triple duplicate ACK, 
-it jumps back and retransmits all packets starting from the lost packet (\ie Go-Back-N), even in the case of isolated loss.
-As a result, when initially testing our implementation of Cubic, each time the buffer was filled, CCP
-would cut the window, but when the cumulative ACK finally advanced, mTCP would immediately transmit a congestion window’s worth of packets in a burst (most of which had already been successfully received and SACKed), causing more congestion. \ma{I agree with Eddie that we can cut this.}
+%
+%mTCP's lack of support for SACK caused us problems: when it observes a triple duplicate ACK, 
+%it jumps back and retransmits all packets starting from the lost packet (\ie Go-Back-N), even in the case of isolated loss.
+%As a result, when initially testing our implementation of Cubic, each time the buffer was filled, CCP
+%would cut the window, but when the cumulative ACK finally advanced, mTCP would immediately transmit a congestion window’s worth of packets in a burst (most of which had already been successfully received and SACKed), causing more congestion. \ma{I agree with Eddie that we can cut this.}
 
 The definition of congestion signal primitives, IPC, and window and rate enforcement mechanisms is the only datapath-specific work needed to support CCP.
 As an example, Table ~\ref{tab:api:kernel} details the mapping of kernel variables to CCP primitives.
@@ -87,5 +87,5 @@ All other necessary functionality, most notably interpreting and running the dat
         \texttt{Flow.bytes\_in\_flight}, \texttt{Flow.packets\_in\_flight} & \texttt{tcp\_packets\_in\_flight(tcp\_sock)} \\
     \end{tabular}
     %\vspace{0.075in}
-    \caption{Definition of CCP primitives in terms of the \ct{tcp\_sock} and \ct{rate\_sample} structures, for the Linux kernel datapath.}\label{tab:api:kernel}
+    \caption{Definition of CCP primitives in terms of the \texttt{tcp\_sock} and \texttt{rate\_sample} structures, for the Linux kernel datapath.}\label{tab:api:kernel}
 \end{table}

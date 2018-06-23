@@ -1,14 +1,5 @@
 \section{CCP Design Principles}
 \label{s:design}
-%
-\begin{figure}[t]
-\centering
-    \includegraphics[width=\columnwidth]{img/ccp_design_sigcomm}
-    \caption{Congestion control algorithms in CCP are distinct from the application and datapath.
-    Users specify control patterns to set the congestion window or rate,
-    and fold functions to define how to summarize datapath messages into reports processed in CCP.}\label{fig:design}
-\end{figure}
-%
 
 To enable rich new congestion control algorithms on datapaths,
 CCP must provide a low-barrier programming environment and access
@@ -37,6 +28,7 @@ enabling control policies across groups of hosts.
 congestion measurements with low delays and high throughput if the two reside in
 the same address space.
 
+\smallskip
 Our design restructures congestion control algorithms into two components in
 separate address spaces: an off-datapath {\em CCP agent} and a component that
 executes in the datapath itself.
@@ -118,5 +110,3 @@ At a high level, CCP-compatible datapaths expose a number of {\em congestion sig
 It is also possible to perform \emph{control actions} such as reporting summarized measurements to CCP or setting a flow's pacing rate. 
 Datapath programs can trigger fold functions and control actions when certain conditions hold, \eg an ACK is received or a timer elapses.
 Users can thus control how to partition the logic of the algorithm between these two components according to their performance and flexibility requirements (\S\ref{s:ccp:ss}).
-
-Figure~\ref{fig:design} shows the architecture of a CCP-enabled sender, highlighting how the components we have discussed in this section fit together. 
