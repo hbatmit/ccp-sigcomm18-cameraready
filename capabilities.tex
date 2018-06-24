@@ -1,8 +1,16 @@
 \section{New Capabilities}
 \label{s:capabilities}
-%\ma{I don't think we need to change this. 'New Capabilities' seems fine}
-%
-%
+ \begin{figure}
+    \centering
+    \includegraphics[width=\columnwidth]{img/stair}
+    \caption{5 20-second iperf flows with 10 second staggered starts. While Reno (right) must individually probe for bandwidth for each new connection, an aggregating congestion controller is able to immediately set the connection's congestion window to the fair share value.}
+    \label{fig:cap:agg}
+\end{figure}
+\begin{figure*}[t!]
+    \centering
+    \includegraphics[width=2\columnwidth]{img/wora}
+    \caption{Comparison of the same CCP implementation of Cubic and Copa run on three different datapaths. Copa is run on a fixed 12 Mbps link with a 20 ms RTT; Cubic is run on a fixed 24 Mbps link with a 20 ms RTT.}\label{fig:datapaths:wora}
+\end{figure*}
 We present four new capabilities enabled by CCP: new congestion control algorithms that use sophisticated user-space programming libraries, rapid development and testing of algorithms, congestion control for flow aggregates, and the ability to write an algorithm once and run it on multiple datapaths.
 
 \subsection{Sophisticated Congestion Control Algorithms}
@@ -61,7 +69,7 @@ After the ACK compression bug was fixed in the CCP version, Copa achieves higher
 
 \subsection{Flow Aggregation}
 \label{s:capabilities:agg}
-
+%
 % from nimbus nsdi submission's intro
 Congestion control on the Internet is performed by individual TCP connections. Each connection independently probes for bandwidth, detects congestion on its path, and reacts to it. Congestion Manager~\cite{cm} proposed the idea of performing congestion control for aggregates of flows at end-hosts. Flow aggregation allows different flows to share congestion information and achieve the correct rate more quickly. 
 
@@ -91,22 +99,9 @@ Algorithms can aggregate flows using the connection 5-tuple, passed as an argume
 As a proof of concept, we implement an algorithm which simply aggregates all flows on each of the hosts's interfaces into one aggregate and assigns the window in equal portions to each sub-flow.
 Figure~\ref{fig:cap:agg} shows the aggregator instantaneously apportioning equal windows to each flow in its domain.
 
- \begin{figure}
-    \centering
-    \includegraphics[width=\columnwidth]{img/stair}
-    \caption{5 20-second iperf flows with 10 second staggered starts. While Reno (right) must individually probe for bandwidth for each new connection, an aggregating congestion controller is able to immediately set the connection's congestion window to the fair share value.}
-    \label{fig:cap:agg}
-\end{figure}
-\begin{figure*}[t!]
-    \centering
-    \includegraphics[width=2\columnwidth]{img/new-wora}
-    \caption{Comparison of the same CCP implementation of Cubic and Copa run on three different datapaths. Copa is run on a 12 Mbps link for all three datapaths. For Cubic, we use a 24 Mbps link on the QUIC and kernel datapaths. mTCP did not exhibit stable behavior at higher bandwidths, so we ran mTCP at 12 Mbps; this is why the congestion window is lower.}\label{fig:datapaths:wora}
-\end{figure*}
-
-
 \subsection{Write-Once, Run-Anywhere}
 \label{s:capabilities:wora}
-\label{s:datapaths:eval}
+%\label{s:datapaths:eval}
 
 Implementing a new congestion control algorithm is difficult because of the subtle correctness and performance issues that require expertise to understand and resolve. New algorithms are often implemented in a single datapath and new datapaths have very few algorithms implemented. 
 CCP enables algorithm designers to focus on building and testing a single solid implementation of their algorithm that users can then run on any (supported) datapath. 
