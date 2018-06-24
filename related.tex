@@ -7,7 +7,7 @@ The Congestion Manager (CM~\cite{cm}) proposed a kernel module to separate conge
 %CCP requires no application changes and supports flow aggregation capabilities as well as an API for developers to develop novel algorithms, and it does so with few changes to the datapath. We show a CCP implementation of functionality similar to the congestion manager in 
 
 eBPF~\cite{ebpf} allows developers to define programs that can be safely executed in the Linux kernel. These programs can be compiled just-in-time (JIT) and attached to kernel functions for debugging. TCP BPF~\cite{tcpbpf} is an extension to BPF that allows matching on flow metadata (\ie 4-tuple) to customize TCP connection settings, such as the TCP buffer size or SYN RTO.
-In the kernel datapath, it may be possible for CCP to use the JIT features of eBPF to gather measurements.
+In the kernel datapath, it may be possible for CCP to use the JIT features of eBPF to gather measurements (but not to set rates and congestion windows).
 Exploring this possibility is future work.
 %While it may be possible to develop an eBPF backend for CCP to gather measurements from the Linux kernel, unlike \ct{libccp} this method would not be portable to other datapaths and does not support congestion window or rate enforcement. 
 
