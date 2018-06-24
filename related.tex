@@ -1,17 +1,21 @@
 \section{Related Work}
 \label{s:relwork}
 %The CCP aims to provide a API for congestion control that decouples congestion control logic from the datapath, while keeping accurate measurement information from the datapath.
-The congestion manager (CM~\cite{cm}) proposed a new kernel-based datapath to jointly perform congestion control operations for groups of flows. CCP requires no application changes and supports flow aggregation capabilities as well as an API for developers to develop novel algorithms, and it does so with few changes to the datapath. We show a CCP implementation of functionality similar to the congestion manager in \S\ref{s:capabilities:agg}.
+The Congestion Manager (CM~\cite{cm}) proposed a kernel module to separate congestion control from individual flows. CM provides an API for flows to govern their transmissions and a plan to aggregate congestion information across flows believed to share a bottleneck. The CM API requires a flow to inform the CM whenever it wanted to send data; at some point in the future, the CM will issue a callback to the flow granting it permission to send a specified amount of data. Unlike CCP, the CM architecture does not support non-kernel datapaths, and its performance is sub-optimal if the CM and the datapath are in different address spaces. The reason is that in this case each permission grant (typically on each new ACK) requires a context switch, which reduces throughput and increases latency. We show in \S\ref{s:capabilities:agg} that CCP can support the aggregate congestion control capabilities of the CM architecture.
 
-eBPF~\cite{ebpf} allows developers to define programs that can be safely executed in the Linux kernel. These programs can be JIT-compiled and attached to kernel functions for debugging. TCP BPF~\cite{tcpbpf} is an extension to BPF that allows matching on flow metadata (\ie 4-tuple) to customize TCP connection settings, such as the TCP buffer size or SYN RTO.
-In the kernel datapath, it may be possible to use the JIT features of eBPF to gather measurements.
-Exploring this implementation option remains future work.
+
+%CCP requires no application changes and supports flow aggregation capabilities as well as an API for developers to develop novel algorithms, and it does so with few changes to the datapath. We show a CCP implementation of functionality similar to the congestion manager in 
+
+eBPF~\cite{ebpf} allows developers to define programs that can be safely executed in the Linux kernel. These programs can be compiled just-in-time (JIT) and attached to kernel functions for debugging. TCP BPF~\cite{tcpbpf} is an extension to BPF that allows matching on flow metadata (\ie 4-tuple) to customize TCP connection settings, such as the TCP buffer size or SYN RTO.
+In the kernel datapath, it may be possible for CCP to use the JIT features of eBPF to gather measurements.
+Exploring this possibility is future work.
 %While it may be possible to develop an eBPF backend for CCP to gather measurements from the Linux kernel, unlike \ct{libccp} this method would not be portable to other datapaths and does not support congestion window or rate enforcement. 
 
 Linux includes a pluggable TCP API~\cite{lwn-pluggable-tcp}, which exposes various statistics for every connection, including delay, rates averaged over the past RTT, ECN information, timeouts, and packet loss.
 icTCP~\cite{icTCP} is a modified TCP stack in the Linux kernel that allows user-space programs to modify specific TCP-related variables, such as the congestion window, slow start threshold, receive window size, and retransmission timeout. 
 QUIC~\cite{quic} also offers pluggable congestion control. 
-These APIs each support a wide variety of congestion control algorithms---indeed, we use the Linux and QUIC pluggable congestion control APIs to implement support for CCP. CCP's API draws from them, but has an emphasis on asynchronous control.
+%These APIs each support a wide variety of congestion control algorithms---indeed, 
+We use these Linux and QUIC APIs to implement support for CCP. CCP's API draws from them, but emphasizes {\em asynchronous} control.
 %CCP extracts common primitives for congestion control across multiple datapaths, supporting off-datapath programmability with the performance of in-datapath implementations.
 
 HotCocoa~\cite{hotcocoa} introduces a domain specific language to allow developers to compile congestion control algorithms directly into programmable NICs to increase efficiency in packet processing. In contrast, CCP allows developers to write algorithms in user-space with the full benefit of libraries and conveniences such as  floating point operations (\eg for Fourier transforms). 
