@@ -1,26 +1,33 @@
 \section{Related Work}
 \label{s:relwork}
 %The CCP aims to provide a API for congestion control that decouples congestion control logic from the datapath, while keeping accurate measurement information from the datapath.
-The Congestion Manager (CM~\cite{cm}) proposed a kernel module to separate congestion control from individual flows. CM provides an API for flows to govern their transmissions and a plan to aggregate congestion information across flows believed to share a bottleneck. The CM API requires a flow to inform the CM whenever it wanted to send data; at some point in the future, the CM will issue a callback to the flow granting it permission to send a specified amount of data. Unlike CCP, the CM architecture does not support non-kernel datapaths, and its performance is sub-optimal if the CM and the datapath are in different address spaces. The reason is that in this case each permission grant (typically on each new ACK) requires a context switch, which reduces throughput and increases latency. We show in \S\ref{s:capabilities:agg} that CCP can support the aggregate congestion control capabilities of the CM architecture.
+The Congestion Manager (CM~\cite{cm}) proposed a kernel module to separate congestion control from individual flows. CM provides an API for flows to govern their transmissions and a plan to aggregate congestion information across flows believed to share a bottleneck. The CM API requires a flow to inform the CM whenever it wanted to send data; at some point in the future, the CM will issue a callback to the flow granting it permission to send a specified amount of data. Unlike CCP, the CM architecture does not support non-kernel datapaths or allow custom congestion control algorithms. Further, the performance of CM is sub-optimal if the CM and the datapath are in different address spaces, since %The reason is that in this case 
+each permission grant (typically on each new ACK) requires a context switch, which reduces throughput and increases latency. We show in \S\ref{s:capabilities:agg} that CCP can support the aggregate congestion control capabilities of the CM architecture.
 
 
 %CCP requires no application changes and supports flow aggregation capabilities as well as an API for developers to develop novel algorithms, and it does so with few changes to the datapath. We show a CCP implementation of functionality similar to the congestion manager in 
 
 eBPF~\cite{ebpf} allows developers to define programs that can be safely executed in the Linux kernel. These programs can be compiled just-in-time (JIT) and attached to kernel functions for debugging. TCP BPF~\cite{tcpbpf} is an extension to BPF that allows matching on flow metadata (\ie 4-tuple) to customize TCP connection settings, such as the TCP buffer size or SYN RTO.
-In the kernel datapath, it may be possible for CCP to use the JIT features of eBPF to gather measurements (but not to set rates and congestion windows).
-Exploring this possibility is future work.
+In the kernel datapath, it may be possible for CCP to use the JIT features of eBPF to gather measurements, but not (yet) to set rates and congestion windows.
+Exploring the possibility of TCP control entrypoints for eBPF, and an implementation of a Linux kernel datapath for CCP based on such control, is left for future work.
+% Exploring this possibility is future work.
 %While it may be possible to develop an eBPF backend for CCP to gather measurements from the Linux kernel, unlike \ct{libccp} this method would not be portable to other datapaths and does not support congestion window or rate enforcement. 
 
 Linux includes a pluggable TCP API~\cite{lwn-pluggable-tcp}, which exposes various statistics for every connection, including delay, rates averaged over the past RTT, ECN information, timeouts, and packet loss.
 icTCP~\cite{icTCP} is a modified TCP stack in the Linux kernel that allows user-space programs to modify specific TCP-related variables, such as the congestion window, slow start threshold, receive window size, and retransmission timeout. 
 QUIC~\cite{quic} also offers pluggable congestion control. 
 %These APIs each support a wide variety of congestion control algorithms---indeed, 
-We use these Linux and QUIC APIs to implement support for CCP. CCP's API draws from them, but emphasizes {\em asynchronous} control.
+We use these Linux and QUIC pluggable APIs to implement datapath support for CCP. CCP's API draws from them, but emphasizes asynchronous control over datapaths.
 %CCP extracts common primitives for congestion control across multiple datapaths, supporting off-datapath programmability with the performance of in-datapath implementations.
 
 HotCocoa~\cite{hotcocoa} introduces a domain specific language to allow developers to compile congestion control algorithms directly into programmable NICs to increase efficiency in packet processing. In contrast, CCP allows developers to write algorithms in user-space with the full benefit of libraries and conveniences such as  floating point operations (\eg for Fourier transforms). 
 
-Structured Streams~\cite{structuredstreams} proposed a datapath that prevents head-of-line blocking by managing streams between the the same two hosts together and applying a hereditary structure on streams. CCP does not change the underlying structure of the transport on the datapath; the Linux kernel datapath, for example, uses TCP streams. 
+Structured Streams (SST~\cite{structuredstreams}) proposed a datapath that prevents head-of-line blocking among packets of applications by managing the transport streams between a given pair of hosts and applying a hereditary structure on the streams. %
+Unlike SST, CCP does not manage the contents of the underlying transport stream: CCP enables deciding when a packet is transmitted, not which packet.
+%
+We view SST and CCP as complementary architectures providing composable benefits.
+%
+% CCP does not change the underlying structure of the transport on the datapath; the Linux kernel datapath, for example, uses TCP streams. 
 
 Finally, there is a wide range of previous literature on moving kernel functionality into user-space. 
 %The Exokernel~\cite{exokernel} is an operating system architecture that securely exports hardware functionality into untrusted user-space library operating systems.
