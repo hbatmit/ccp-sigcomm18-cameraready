@@ -103,8 +103,8 @@ Across all flow sizes, CCP achieves FCTs 0.02\% lower than the kernel in the med
 \label{sec:eval:whyfold:stale}
 \begin{figure}[t]
 \centering
-    \includegraphics[width=\columnwidth]{img/ipc-latency}
-    \caption{Minimum time required to send information to the datapath and receive a response using different IPC mechanisms. The dotted lines show latency when the process is bound to a single CPU core.}\label{fig:eval:ipc-latency}
+    \includegraphics[width=\columnwidth]{img/ipc}
+    \caption{Minimum time required to send information to the datapath and receive a response using different IPC mechanisms.}\label{fig:eval:ipc-latency}
 \end{figure}
 
 Because our CCP implementation, Portus, runs in a different address space than datapath code, there is some delay between the datapath gathering a report and algorithm code acting upon the report.
@@ -117,7 +117,7 @@ We test three IPC mechanisms: Unix-domain sockets~\cite{unix-domain}, a convenie
 %our custom kernel module, which implements a message queue that processes (or the kernel) can use via a character device.
 % that processes can read from and write to.
 
-In all cases, the $95^{\text{th}}$ percentile latency is less than $30$ $\mu$s. If the sending process is pinned to a CPU core to avoid process scheduling overheads, the $95^{\text{th}}$ percentile drops to $20$ $\mu$s.
+In all cases, the $95^{\text{th}}$ percentile latency is less than $30$ $\mu$s. 
 
 \begin{figure*}[t]
 \centering

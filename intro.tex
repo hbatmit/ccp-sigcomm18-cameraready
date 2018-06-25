@@ -3,7 +3,7 @@
 
 At its core, a congestion control protocol determines when each segment of data must be sent. Because a natural place to make this decision is within the transport layer, congestion control today is tightly woven into kernel TCP software and runs independently for each TCP connection.
 
-This design has three shortcomings. First, many recent proposals use techniques such as Bayesian forecasts (Sprout~\cite{sprout}), offline or online learning (Remy~\cite{remy}, PCC~\cite{pcc}, PCC-Vivace~\cite{pcc-vivace}, Indigo~\cite{pantheon}), or signal processing with Fourier transforms (Nimbus~\cite{nimbus}) that are difficult, if not impossible, to implement in a kernel lacking useful libraries for the required calculations (even the cube root function in Linux's Cubic code is a table lookup rather than a true cube root). Moreover, to meet tight performance constraints, in-kernel congestion control methods have largely been restricted to simple window/rate increments or decrements. 
+This design has three shortcomings. First, many recent proposals use techniques such as Bayesian forecasts (Sprout~\cite{sprout}), offline or online learning (Remy~\cite{remy}, PCC~\cite{pcc}, PCC-Vivace~\cite{pcc-vivace}, Indigo~\cite{pantheon}), or signal processing with Fourier transforms (Nimbus~\cite{nimbus}) that are difficult, if not impossible, to implement in a kernel lacking useful libraries for the required calculations. For example, computing the cube root function in Linux's Cubic implementation requires using a table lookup and a Newton-Raphson iteration, rather than a simple function call. Moreover, to meet tight performance constraints, in-kernel congestion control methods have largely been restricted to simple window/rate increments or decrements.
 
 %However, this tight coupling is not fundamental to congestion control; rather,
 %it imposes an artificial restriction on algorithms to restrict their
@@ -29,18 +29,26 @@ Second, the kernel TCP stack is but one example of a {\em datapath}, the term we
 %    \vspace{-16pt}
 %\end{figure}
 
-New datapaths offer limited choices for congestion control because implementing these algorithms correctly takes considerable time and effort. For instance, the set of available algorithms in mTCP~\cite{mtcp}, a TCP implementation on DPDK, is limited to a variant of Reno. Lest one dismiss this example as a research project lacking in engineering resources, we note that QUIC, despite Google's imposing engineering resources, does not have most of the algorithms that have been implemented in the Linux kernel over many years.  
+New datapaths offer limited choices for congestion control because implementing these algorithms correctly takes considerable time and effort. 
+%
+We believe this significantly hinders experimentation and innovation both in the datapaths and the congestion control algorithms running over them.
+%
+For instance, the set of available algorithms in mTCP~\cite{mtcp}, a TCP implementation on DPDK, is limited to a variant of Reno. 
+%
+% Lest one dismiss this example as a research project lacking in engineering resources, we note that
+%
+QUIC, despite Google's imposing engineering resources, does not have implementations of several algorithms that have existed in the Linux kernel for many years.  
 We expect this situation to worsen with the emergence of new hardware accelerators and programmable network interface cards (NICs) because high-speed hardware designers tend to forego programming convenience for performance. 
 %The difficulty is not the volume of code, but rather is the subtle correctness and performance issues in various algorithms that require expertise to understand and resolve.
 
-Third, tying congestion control to the datapath makes it hard to provide even simple new capabilities, such as aggregating congestion information across flows that share common bottlenecks as proposed in the Congestion Manager project~\cite{cm}. 
+Third, tying congestion control tightly to the datapath makes it hard to provide new capabilities, such as aggregating congestion information across flows that share common bottlenecks, as proposed in the Congestion Manager project~\cite{cm}. 
 
 %This paper starts from the observation that congestion control algorithms need not be implemented in the datapath. 
 
 \smallskip
 If, instead, the datapath encapsulated the information available to it about {\em congestion signals} like packet round-trip times (RTT), receptions, losses, ECN, etc., and periodically provided this information to an off-datapath module, then congestion control algorithms could run in the context of that module. 
 By exposing an analogous interface to control transmission parameters such as the window size, pacing rate, and transmission pattern, the datapath could transmit data according to the policies specified by the off-datapath congestion control algorithm. Of course, the datapath must be modified to expose
-such an interface, but such an effort needs to be undertaken only once for each datapath.
+such an interface, but this effort needs to be undertaken only once for each datapath.
 %, and does not grow with the number of congestion control algorithms.
 
 We use the term {\em Congestion Control Plane (CCP)} to refer to this off-datapath module. Running congestion control in the CCP offers the following benefits:
@@ -50,9 +58,9 @@ We use the term {\em Congestion Control Plane (CCP)} to refer to this off-datapa
     \item {\bf Higher pace of development:} With good abstractions,
       a congestion control designer can focus on the algorithmic essentials
       without worrying about the details and data structures of the
-      datapath. The resulting code is easier to read and maintain. In our implementation, congestion control algorithms in CCP are written in Rust or Python and run in user-space. 
+      datapath. The resulting code is easier to read and maintain. In our implementation, congestion control algorithms in CCP are written in Rust or Python and run in user space. 
     \item {\bf New capabilities:} CCP makes it easier to provide new
-      capabilities, such as aggregate control of multiple flows~\cite{cm}, and algorithms that require significant computation (e.g., signal processing, machine learning, \etc) using \userspace programming environments. 
+      capabilities, such as aggregate control of multiple flows~\cite{cm}, and algorithms that require sophisticated computation (e.g., signal processing, machine learning, \etc) running in \userspace programming environments. 
       %These algorithms are hard to write as window updates on incoming ACKs.
       %All the benefits of a \userspace programming environment (libraries, debuggers, \etc) will be available to       developers.
 \end{enumerate}
