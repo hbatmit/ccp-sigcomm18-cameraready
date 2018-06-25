@@ -6,7 +6,7 @@
 %\settopmatter{printacmref=false}
 
 % remove the annoying header on each page
-\fancyhead{}
+%\fancyhead{}
 
 \input{packages}
 %\captionsetup[figure]{belowskip=-5pt, aboveskip=5pt}
@@ -15,19 +15,11 @@
 
 \begin{document}
 \title{Restructuring Endpoint Congestion Control}
-\author{
-Akshay Narayan,
-Frank Cangialosi,
-Deepti Raghavan,
-Prateesh Goyal,\\
-Srinivas Narayana,
-Radhika Mittal,
-Mohammad Alizadeh,
-Hari Balakrishnan
-}
-%\email{{akshayn,frankc,deeptir,prateesh,alephtwo,alizadeh,hari}@csail.mit.edu, radhika@eecs.berkeley.edu}
+\author{Akshay Narayan, Frank Cangialosi, Deepti Raghavan, Prateesh Goyal}
+\author{Srinivas Narayana, Radhika Mittal, Mohammad Alizadeh, Hari Balakrishnan}
 \email{ccp@csail.mit.edu}
 \affiliation{MIT Computer Science and Artificial Intelligence Laboratory}
+%\email{{akshayn,frankc,deeptir,prateesh,alephtwo,alizadeh,hari}@csail.mit.edu, radhika@eecs.berkeley.edu}
 \begin{CCSXML}
 <ccs2012>
 <concept>
@@ -58,6 +50,8 @@ Hari Balakrishnan
 \newcommand*{\origrightarrow}{$\rightarrow$}
 \let\oldarrow\textrightarrow
 \renewcommand*{\textrightarrow}{\fontfamily{cmr}\selectfont\origrightarrow}
+%\renewcommand{\shortauthors}{Akshay Narayan, Frank Cangialosi, Deepti Raghavan, et al.}
+\renewcommand{\shortauthors}{}
 
 \begin{sloppypar}
 \include{abstract}
