@@ -3,7 +3,7 @@
 
 At its core, a congestion control protocol determines when each segment of data must be sent. Because a natural place to make this decision is within the transport layer, congestion control today is tightly woven into kernel TCP software and runs independently for each TCP connection.
 
-This design has three shortcomings. First, many recent proposals use techniques such as Bayesian forecasts (Sprout~\cite{sprout}), offline or online learning (Remy~\cite{remy}, PCC~\cite{pcc}, PCC-Vivace~\cite{pcc-vivace}, Indigo~\cite{pantheon}), or signal processing with Fourier transforms (Nimbus~\cite{nimbus}) that are difficult, if not impossible, to implement in a kernel lacking useful libraries for the required calculations. For example, computing the cube root function in Linux's Cubic implementation requires using a table lookup and a Newton-Raphson iteration, rather than a simple function call. Moreover, to meet tight performance constraints, in-kernel congestion control methods have largely been restricted to simple window/rate increments or decrements.
+This design has three shortcomings. First, many modern proposals use techniques such as Bayesian forecasts (Sprout~\cite{sprout}), offline or online learning (Remy~\cite{remy}, PCC~\cite{pcc}, PCC-Vivace~\cite{pcc-vivace}, Indigo~\cite{pantheon}), or signal processing with Fourier transforms (Nimbus~\cite{nimbus}) that are difficult, if not impossible, to implement in a kernel lacking useful libraries for the required calculations. For example, computing the cube root function in Linux's Cubic implementation requires using a table lookup and a Newton-Raphson iteration instead of a simple function call. Moreover, to meet tight performance constraints, in-kernel congestion control methods have largely been restricted to simple window or rate arithmetic.
 
 %However, this tight coupling is not fundamental to congestion control; rather,
 %it imposes an artificial restriction on algorithms to restrict their
@@ -18,7 +18,7 @@ This design has three shortcomings. First, many recent proposals use techniques 
 %For example, Nimbus uses Fast Fourier Transforms to determine the amount and
 %nature of the cross-traffic on the bottleneck link.
 
-Second, the kernel TCP stack is but one example of a {\em datapath}, the term we use for any module that provides data transmission and reception interfaces between higher-layer applications and lower-layer network hardware. Recently, many other datapaths have emerged, including user-space protocols atop UDP (e.g., QUIC~\cite{quic}, WebRTC~\cite{webrtc}, Mosh~\cite{mosh}), kernel-bypass methods (e.g., mTCP/DPDK~\cite{dpdk,mtcp,netmap}), RDMA~\cite{dcqcn}, multi-path TCP (MPTCP)~\cite{mptcp}, and specialized Network Interface Cards (``SmartNICs''~\cite{smartnic}). This trend suggests that the future will see many applications using datapaths different from kernel-supported TCP connections.
+Second, the kernel TCP stack is but one example of a {\em datapath}, the term we use for any module that provides data transmission and reception interfaces between higher-layer applications and lower-layer network hardware. Recently, new datapaths have emerged, including user-space protocols atop UDP (e.g., QUIC~\cite{quic}, WebRTC~\cite{webrtc}, Mosh~\cite{mosh}), kernel-bypass methods (e.g., mTCP/DPDK~\cite{dpdk,mtcp,netmap}), RDMA~\cite{dcqcn}, multi-path TCP (MPTCP)~\cite{mptcp}, and specialized Network Interface Cards (``SmartNICs''~\cite{smartnic}). This trend suggests that future applications will use datapaths different from traditional kernel-supported TCP connections.
 %
 %\begin{figure}[t]
 %\centering
@@ -30,13 +30,8 @@ Second, the kernel TCP stack is but one example of a {\em datapath}, the term we
 %\end{figure}
 
 New datapaths offer limited choices for congestion control because implementing these algorithms correctly takes considerable time and effort. 
-%
 We believe this significantly hinders experimentation and innovation both in the datapaths and the congestion control algorithms running over them.
-%
 For instance, the set of available algorithms in mTCP~\cite{mtcp}, a TCP implementation on DPDK, is limited to a variant of Reno. 
-%
-% Lest one dismiss this example as a research project lacking in engineering resources, we note that
-%
 QUIC, despite Google's imposing engineering resources, does not have implementations of several algorithms that have existed in the Linux kernel for many years.  
 We expect this situation to worsen with the emergence of new hardware accelerators and programmable network interface cards (NICs) because high-speed hardware designers tend to forego programming convenience for performance. 
 %The difficulty is not the volume of code, but rather is the subtle correctness and performance issues in various algorithms that require expertise to understand and resolve.

@@ -155,7 +155,7 @@ In all cases, the $95^{\text{th}}$ percentile latency is less than $30$ $\mu$s.
 
 CCP naturally has nonzero overhead since more context switches must occur to make congestion control decisions in user-space.
 We test two scenarios as the number of flows in the system increases exponentially from $1$ to $64$.
-In both scenarios, we test CCP's implementation of Reno and Cubic against the Linux kernel's. We measure average throughput and CPU utilization in $1$ second intervals over the course of $10$ $15$-second experiments using iperf~\cite{iperf}. We use a reporting interval of $10$ ms.
+In both scenarios, we test CCP's implementation of Reno and Cubic against the Linux kernel's. We measure average throughput and CPU utilization in $1$ second intervals over the course of $10$ $30$-second experiments using iperf~\cite{iperf}. We evaluate CCP with two fold functions: one which implements a reporting interval of $10$ ms, and another which reports on every packet.
 
 We omit mTCP and QUIC from these scalability micro-benchmarks and focus on the kernel datapath. The QUIC toy server is mainly used for integration testing and does not perform well as the number of flows increase; we confirmed this behavior with Google's QUIC team. Similarly, after discussion with the mTCP authors, we were unable to run mTCP at sufficient speeds to saturate a localhost or 10 Gbit/sec connection.
 
@@ -165,7 +165,7 @@ We omit mTCP and QUIC from these scalability micro-benchmarks and focus on the k
 \paragrapha{CPU Utilization} To demonstrate the overhead of CCP in a realistic scenario, we scale the number of flows over a single $10$ Gbit/s link between two physical servers and measure the resulting CPU utilization.
 Figure~\ref{fig:eval:perf:10g} shows that as the number of flows increases, the CPU utilization in the CCP case rises steadily. The difference between CCP and the kernel is most pronounced in the region between $16$ and $64$ flows, where CCP uses $2.0\times$ as much CPU than the kernel on average; the CPU utilization nevertheless remains under 8\% in all cases.
 
-In both the CPU utilization and the throughput microbenchmarks, the differences in CPU utilization stem from the necessarily greater number of context switches as more flows send measurements to CCP. Furthermore, the congestion control algorithm used does not affect performance.
+In both the CPU utilization and the throughput micro-benchmarks, the differences in CPU utilization stem from the necessarily greater number of context switches as more flows send measurements to CCP. Furthermore, the congestion control algorithm used does not affect performance.
 
 \subsection{Low-RTT and High Bandwidth Paths}
 \label{sec:eval:lowrtt}
