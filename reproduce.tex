@@ -3,12 +3,12 @@
 
 As discussed in \S\ref{s:datapath}, we have published each of the components of CCP at \url{github.com/ccp-project}. 
 This includes Portus, the CCP userspace agent (\url{https://github.com/ccp-project/portus}), \texttt{libccp} (\url{https://github.com/ccp-project/libccp}), and the implementation of CCP support for the three datapaths we evaluate. 
-Our Linux kernel (\url{https://github.com/ccp-project/ccp-kernel}) datapath is a kernel module which we have tested using kernel version \texttt{4.15}. 
+Our Linux kernel (\url{https://github.com/ccp-project/ccp-kernel}) datapath is a kernel module which we have tested using kernel version \texttt{4.14}. 
 Our mTCP datapath (\url{https://github.com/ccp-project/ccp-mtcp}) is a fork of the original authors' mTCP implementation (\url{https://github.com/eunyoung14/mtcp}). We are working towards having the CCP changes merged into the upstream implementation.
 Our QUIC datapath (\url{https://github.com/ccp-project/ccp-quic}) is a patch for the Chromium QUIC implementation. 
 
 We also implemented a number of congestion control algorithms: Reno and Cubic (\url{https://github.com/ccp-project/generic-cong-avoid}), BBR (\url{https://github.com/ccp-project/bbr}), and Nimbus (\url{https://github.com/ccp-project/nimbus}). Venkat Arun's implementation of Copa is also available at \url{https://github.com/venkatarun95/ccp_copa}.
 
-To make replicating our experiments easier, we have published a number of experiment scripts here: \url{https://github.com/ccp-project/eval-scripts}. Running the various scripts located in the \texttt{scripts} directory will reproduce the figures from \S\ref{sec:eval}.
+To make replicating our experiments easier, we have published a number of experiment scripts here: \url{https://github.com/ccp-project/eval-scripts}. Running the various scripts as outlined in the Readme will reproduce the figures from \S\ref{sec:eval}.
 
 Finally, the source for this document is at \url{https://github.com/ccp-project/sigcomm18}.
